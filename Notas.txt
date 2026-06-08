@@ -1,0 +1,27 @@
+MVC (Modelo-Vista-Controlador), consiste en separar la aplicación en tres grandes capas independientes:
+
+1. El Modelo (M)
+Es la capa que maneja los datos y las reglas de negocio. Es el único que tiene permitido hablar con la base de datos (ya sea SQLite, PostgreSQL, etc.).
+
+En tu proyecto: Es el archivo que importás al principio: const Movimiento = require('../models/movimientoModel').
+
+Su función: Sabe cómo hacer un SELECT para buscar un saldo, cómo hacer un INSERT para guardar una transferencia y cómo verificar si un registro ya existe.
+Al controlador no le importa cómo el modelo guarda los datos, solo le pide que lo haga.
+
+2. El Controlador (C)
+Es el cerebro lógico o el intermediario. No sabe cómo guardar datos en la base de datos ni sabe cómo mostrárselos al usuario en la pantalla. 
+Su trabajo es recibir la petición del cliente, procesarla, aplicar la lógica (como tu "detector inteligente de alias"), pedirle datos al Modelo, hablar con APIs externas (el Central) y decidir qué responder.
+
+En tu proyecto: Es el archivo ControllerPersona que me pasaste. Contiene las funciones realizarTransferencia, obtenerTransacciones, etc.
+
+3. La Vista (V)
+Es la interfaz gráfica, lo que el usuario ve y toca (botones, formularios, el historial con colores).
+
+¿Dónde está la Vista en tu backend? En los desarrollos modernos de software (como el que estás haciendo), la Vista se separa por completo del Backend.
+La Vista suele ser una aplicación independiente hecha en el "Frontend" (con React, Angular, Vue o HTML/CSS común).
+
+Tu controlador no dibuja la pantalla, sino que responde con datos puros en formato JSON (res.status(200).json(movimientosLocales)).
+El Frontend (la Vista) recibe ese JSON y lo transforma en una linda tabla para el usuario.
+
+¿Por qué es importante que lo entiendas así?
+Porque tu código está organizado en base a esta separación. Si mañana tu profesor te dice: "Muchachos, cambiemos la base de datos de SQLite a PostgreSQL", solo vas a tener que modificar el archivo del Modelo (movimientoModel.js). Tu controlador no se va a enterar ni le va a importar, porque él solo sigue llamando a Movimiento.obtenerSaldo().

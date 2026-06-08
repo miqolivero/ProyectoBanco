@@ -77,3 +77,31 @@ CREATE TABLE IF NOT EXISTS Tarjetas_Credito (
 -- 8. POBLAR TABLAS MAESTRAS (Datos iniciales)
 INSERT INTO Tipos_Producto (nombre) VALUES ('CAJA_AHORRO'), ('CUENTA_CORRIENTE'), ('TARJETA_CREDITO');
 INSERT INTO Estados_Producto (nombre) VALUES ('ACTIVO'), ('BLOQUEADO'), ('CERRADO');
+
+-- 9. TABLA MAESTRA DE TIPOS DE MOVIMIENTO
+CREATE TABLE IF NOT EXISTS Tipos_Movimiento (
+    id_tipo_movimiento SERIAL PRIMARY KEY,
+    nombre VARCHAR(50) UNIQUE NOT NULL -- 'DEPOSITO', 'EXTRACCION', 'TRANSFERENCIA', etc.
+);
+
+-- 10. TABLA DE MOVIMIENTOS
+CREATE TABLE IF NOT EXISTS Movimientos (
+    id_movimiento SERIAL PRIMARY KEY,
+    id_cuenta INTEGER NOT NULL,
+    id_tipo_movimiento INTEGER NOT NULL,
+    monto DECIMAL(15, 2) NOT NULL,
+    fecha_movimiento TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    descripcion VARCHAR(255),
+    -- Relacionamos con la cuenta bancaria
+    FOREIGN KEY (id_cuenta) REFERENCES Cuentas_Bancarias(id_cuenta) ON DELETE CASCADE,
+    -- Relacionamos con el tipo de movimiento
+    FOREIGN KEY (id_tipo_movimiento) REFERENCES Tipos_Movimiento(id_tipo_movimiento)
+);
+
+-- 11. DATOS INICIALES PARA MOVIMIENTOS
+INSERT INTO Tipos_Movimiento (nombre) VALUES 
+('DEPOSITO'), 
+('EXTRACCION'), 
+('TRANSFERENCIA_ENVIADA'), 
+('TRANSFERENCIA_RECIBIDA'),
+('PAGO_SERVICIO');
