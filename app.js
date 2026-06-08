@@ -1,3 +1,6 @@
+// 🎯 AGREGADO: Cargar variables de entorno antes de cualquier otra cosa
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 
@@ -28,7 +31,8 @@ const cargarListaBancos = async () => {
             method: 'GET',
             headers: { 
                 'x-environment': 'test', 
-                'x-api-key': '71d9a899-d4a3-4754-908a-77752e3fa1c3'
+                // 🎯 MODIFICADO: Ahora lee de forma segura desde las variables de entorno
+                'x-api-key': process.env.CENTRAL_BANK_API_KEY 
             },
             body: null 
         });
@@ -55,20 +59,13 @@ const cargarListaBancos = async () => {
 };
 
 // --- 6. MIDDLEWARES REQUERIDOS ---
-app.use(express.json()); // Removimos el cors() duplicado que estaba acá suelto
+app.use(express.json());
 
 // --- 7. RUTAS PRINCIPALES ---
-
-// Rutas de Personas
 app.use('/api/personas', personaRoutes);
-
-// Rutas de Movimientos
 app.use('/api/movimientos', movimientoRoutes);
-
-// Endpoint para visualizar tablas crudas
 app.get('/api/tablas/:tabla', tablaController.obtenerTabla);
 
-// Endpoint de Debug para ver si el diccionario se cargó
 app.get('/debug-bancos', (req, res) => {
     res.json(global.diccionarioBancos);
 });
@@ -86,6 +83,5 @@ app.listen(PORT, () => {
     console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
     console.log(`✅ Rutas listas: /api/personas y /api/movimientos`);
     
-    // Ejecutamos la carga de bancos un segundo después de iniciar para mayor estabilidad
     setTimeout(cargarListaBancos, 1000);
 });

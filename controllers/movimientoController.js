@@ -34,7 +34,7 @@ exports.realizarTransferencia = async (req, res) => {
                 method: 'GET',
                 headers: {
                     'x-environment': 'test',
-                    'x-api-key': '71d9a899-d4a3-4754-908a-77752e3fa1c3'
+                    'x-api-key': process.env.CENTRAL_BANK_API_KEY
                 }
             });
 
@@ -63,7 +63,7 @@ exports.realizarTransferencia = async (req, res) => {
             headers: {
                 'Content-Type': 'application/json',
                 'x-environment': 'test',
-                'x-api-key': '71d9a899-d4a3-4754-908a-77752e3fa1c3'
+                'x-api-key': process.env.CENTRAL_BANK_API_KEY
             },
             body: JSON.stringify({
                 cbuOrigen: cbu_origen.trim(),
@@ -129,7 +129,7 @@ exports.sincronizarTransferenciasRecibidas = async (req, res) => {
             method: 'GET',
             headers: {
                 'x-environment': 'test',
-                'x-api-key': '71d9a899-d4a3-4754-908a-77752e3fa1c3'
+                'x-api-key': process.env.CENTRAL_BANK_API_KEY
             }
         });
 
