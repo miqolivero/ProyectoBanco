@@ -1,0 +1,348 @@
+.prest-container {
+  padding: 12px 0;
+  max-width: 1000px;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.prest-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 24px;
+  align-items: start;
+}
+
+.prest-info-panel {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+}
+
+.prest-info-panel h4 {
+  margin: 0 0 16px 0;
+  font-size: 15px;
+  color: #111827;
+}
+
+.prest-info-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  letter-spacing: 0.5px;
+  margin-top: 16px;
+}
+
+.prest-info-panel .prest-info-label:first-of-type {
+  margin-top: 0;
+}
+
+.prest-info-saldo {
+  margin: 4px 0 0 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f3424;
+}
+
+.prest-info-dato {
+  margin: 4px 0 0 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+@media (max-width: 900px) {
+  .prest-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.prest-header-box h2 {
+  font-size: 24px;
+  color: #111827;
+  margin: 0 0 4px 0;
+}
+
+.prest-header-box p {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 0 0 20px 0;
+}
+
+.prest-tasa-banner {
+  background: linear-gradient(135deg, #0f3424, #1a5c3f);
+  color: white;
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.prest-tasa-label {
+  display: block;
+  font-size: 12px;
+  opacity: 0.8;
+  margin-bottom: 2px;
+}
+
+.prest-tasa-valor {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.prest-tasa-detalle {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.prest-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+  margin-bottom: 24px;
+}
+
+.prest-subtitulo {
+  font-size: 16px;
+  color: #111827;
+  margin: 0 0 16px 0;
+}
+
+.prest-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.prest-row {
+  display: flex;
+  gap: 16px;
+}
+
+.prest-row .prest-field {
+  flex: 1;
+}
+
+.prest-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.prest-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.prest-input-text,
+.prest-input-select {
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  color: #111827;
+  transition: border-color 0.2s;
+  background-color: white;
+}
+
+.prest-input-text:focus,
+.prest-input-select:focus {
+  border-color: #0f3424;
+  box-shadow: 0 0 0 3px rgba(15, 52, 36, 0.1);
+}
+
+.prest-simulador {
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.btn-prest-solicitar {
+  background-color: #0f3424;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  align-self: flex-start;
+}
+
+.btn-prest-solicitar:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btn-prest-solicitar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Alertas */
+.prest-alert {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.prest-alert.error {
+  background-color: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.prest-alert.exito {
+  background-color: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+/* Listado */
+.prest-lista {
+  margin-bottom: 24px;
+}
+
+.prest-empty-msg {
+  color: #6b7280;
+  font-size: 14px;
+  text-align: center;
+  padding: 24px 0;
+}
+
+.prest-item-card {
+  padding: 18px 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background-color: #f9fafb;
+  margin-bottom: 10px;
+}
+
+.prest-item-pagado {
+  opacity: 0.65;
+}
+
+.prest-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.prest-item-header strong {
+  font-size: 16px;
+  color: #111827;
+}
+
+.prest-badge-estado {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+.prest-badge-estado.activo {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.prest-badge-estado.pagado {
+  background-color: #e5e7eb;
+  color: #6b7280;
+}
+
+.prest-item-detalle {
+  display: block;
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 12px;
+}
+
+.prest-proxima-cuota {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px dashed #d1d5db;
+}
+
+.prest-cuota-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.prest-cuota-vencimiento {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.prest-cuota-accion {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.prest-cuota-monto {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.btn-prest-pagar {
+  background-color: #0f3424;
+  color: white;
+  border: none;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-prest-pagar:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btn-prest-pagar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-prest-volver {
+  background-color: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #d1d5db;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-prest-volver:hover {
+  background-color: #e5e7eb;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

@@ -1,0 +1,52 @@
+.manejador-estado-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100vh;
+  justify-content: center;
+  align-items: center;
+  background-color: #ffffff;
+  font-family: 'Segoe UI', sans-serif;
+  text-align: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.manejador-estado-container h3 {
+  color: #1a3d2b;
+  font-weight: 600;
+  margin: 0;
+}
+
+.manejador-error-icon {
+  color: #d97706;
+}
+
+.manejador-error-texto {
+  color: #6b7280;
+  font-size: 14px;
+  max-width: 360px;
+  margin: 0;
+}
+
+.btn-manejador-reintentar {
+  background-color: #0f3424;
+  color: white;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  margin-top: 8px;
+}
+
+.btn-manejador-reintentar:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btn-manejador-reintentar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

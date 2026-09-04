@@ -215,6 +215,9 @@
 }
 
 .error-alert-banco {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 12px;
   background-color: #fee2e2;
   border-left: 4px solid #ef4444;

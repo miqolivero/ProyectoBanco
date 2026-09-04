@@ -1,7 +1,61 @@
 .depositar-container {
   padding: 12px 0;
-  max-width: 650px;
+  max-width: 1000px;
   animation: fadeIn 0.3s ease-in-out;
+}
+
+.depositar-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 24px;
+  align-items: start;
+}
+
+.depositar-info-panel {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+}
+
+.depositar-info-panel h4 {
+  margin: 0 0 16px 0;
+  font-size: 15px;
+  color: #111827;
+}
+
+.depositar-info-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  letter-spacing: 0.5px;
+  margin-top: 12px;
+}
+
+.depositar-info-panel .depositar-info-label:first-of-type {
+  margin-top: 0;
+}
+
+.depositar-info-saldo {
+  margin: 4px 0 0 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f3424;
+}
+
+.depositar-info-dato {
+  margin: 4px 0 0 0;
+  font-size: 14px;
+  color: #111827;
+  word-break: break-all;
+}
+
+@media (max-width: 900px) {
+  .depositar-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 .depositar-header-box h2 {
@@ -53,39 +107,48 @@
   cursor: not-allowed;
 }
 
+/* 🎯 El símbolo ya no va superpuesto sobre el input con un padding-left fijo en px (se
+   superponía con el placeholder cuando el símbolo pasaba de "$" a "US$" en la cuenta en
+   dólares) — ahora vive como un elemento normal dentro del wrapper, que reserva su propio
+   ancho según el texto que tenga, sin importar cuántos caracteres sea. */
 .input-monto-wrapper {
-  position: relative;
   display: flex;
   align-items: center;
-}
-
-.currency-prefix {
-  position: absolute;
-  left: 16px;
-  font-size: 20px;
-  font-weight: 600;
-  color: #4b5563;
-}
-
-.depositar-input-monto {
-  width: 100%;
-  padding: 14px 14px 14px 40px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
-  font-size: 20px;
-  font-weight: 600;
-  outline: none;
-  color: #111827;
   transition: border-color 0.2s;
 }
 
-.depositar-input-monto:focus {
+.input-monto-wrapper:focus-within {
   border-color: #0f3424;
   box-shadow: 0 0 0 3px rgba(15, 52, 36, 0.1);
 }
 
+.currency-prefix {
+  padding-left: 14px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #4b5563;
+  white-space: nowrap;
+}
+
+.depositar-input-monto {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 14px 14px 6px;
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  font-weight: 600;
+  outline: none;
+  color: #111827;
+}
+
 /* Alertas */
 .depositar-alert {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 12px 16px;
   border-radius: 8px;
   font-size: 13px;

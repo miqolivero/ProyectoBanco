@@ -1,0 +1,255 @@
+.servicios-container {
+  padding: 12px 0;
+  max-width: 1000px;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.servicios-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 24px;
+  align-items: start;
+}
+
+.servicios-info-panel {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+}
+
+.servicios-info-panel h4 {
+  margin: 0 0 16px 0;
+  font-size: 15px;
+  color: #111827;
+}
+
+.servicios-info-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  letter-spacing: 0.5px;
+  margin-top: 16px;
+}
+
+.servicios-info-panel .servicios-info-label:first-of-type {
+  margin-top: 0;
+}
+
+.servicios-info-saldo {
+  margin: 4px 0 0 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f3424;
+}
+
+.servicios-info-empresas {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.servicios-info-empresa-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 8px 10px;
+  background-color: #f9fafb;
+  border-radius: 6px;
+}
+
+.servicios-info-empresa-rubro {
+  color: #6b7280;
+}
+
+@media (max-width: 900px) {
+  .servicios-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.servicios-header-box h2 {
+  font-size: 24px;
+  color: #111827;
+  margin: 0 0 4px 0;
+}
+
+.servicios-header-box p {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 0 0 28px 0;
+}
+
+.servicios-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+}
+
+.servicios-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.servicios-row {
+  display: flex;
+  gap: 16px;
+}
+
+.servicios-row .servicios-field {
+  flex: 1;
+}
+
+.servicios-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.servicios-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.servicios-input-select,
+.servicios-input-text {
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  color: #111827;
+  transition: border-color 0.2s;
+  background-color: white;
+}
+
+.servicios-input-select:focus,
+.servicios-input-text:focus {
+  border-color: #0f3424;
+  box-shadow: 0 0 0 3px rgba(15, 52, 36, 0.1);
+}
+
+.btn-serv-consultar {
+  background-color: #0f3424;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-serv-consultar:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btn-serv-consultar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Alertas */
+.servicios-alert {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.servicios-alert.error {
+  background-color: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.servicios-alert.exito {
+  background-color: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+/* Listado de facturas pendientes */
+.servicios-facturas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.servicios-factura-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background-color: #f9fafb;
+}
+
+.servicios-factura-importe {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.servicios-factura-vencimiento {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.btn-serv-pagar {
+  background-color: #0f3424;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-serv-pagar:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btn-serv-pagar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-serv-volver {
+  margin-top: 20px;
+  background-color: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #d1d5db;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-serv-volver:hover {
+  background-color: #e5e7eb;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

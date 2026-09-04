@@ -1,32 +1,38 @@
 .transfer-container {
-  padding: 8px 0;
+  padding: 20px 40px; /* Le da aire arriba/abajo y a los lados */
+  animation: fadeIn 0.2s ease-in-out;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.transfer-header-title h2 {
-  font-size: 26px;
-  color: #111827;
-  margin: 0 0 6px 0;
-}
-
-.transfer-header-title p {
-  color: #6b7280;
-  margin: 0 0 32px 0;
-  font-size: 14px;
-}
-
+/* 🎯 SOLUCIÓN AL ESPACIO HORRIBLE: 
+   Usamos el 100% del ancho disponible para alinearnos perfectamente con los elementos de la barra superior */
 .transfer-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 32px;
+  grid-template-columns: 1fr 340px; /* El formulario toma todo el espacio restante de forma elástica, la sidebar queda fija y estilizada */
+  gap: 40px;                        /* Espacio elegante entre el formulario y los paneles */
   align-items: start;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .transfer-form-card {
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 16px;
-  padding: 32px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  padding: 40px; /* Más espacio interno para que respire el formulario */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-card-title {
+  margin: 0 0 28px 0;
+  font-size: 20px;
+  color: #111827;
+  font-weight: 600;
+  border-bottom: 1px solid #f3f4f6;
+  padding-bottom: 14px;
 }
 
 .form-section {
@@ -37,29 +43,31 @@
   display: block;
   font-size: 13px;
   font-weight: 600;
-  color: #374151;
-  margin-bottom: 10px;
+  color: #4b5563;
+  margin-bottom: 8px;
 }
 
 /* Selector Cuenta Origen */
 .account-selector-card {
-  border: 2px solid #1a3d2b;
-  background-color: #f0f7f4;
+  border: 1px solid #0f3424;
+  background-color: #f0fdf4;
   padding: 16px;
-  border-radius: 12px;
-  max-width: 280px;
+  border-radius: 10px;
+  width: 100%; 
+  box-sizing: border-box;
 }
 
 .account-info-main {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   font-size: 13px;
   font-weight: 600;
-  color: #1a3d2b;
+  color: #0f3424;
 }
 
 .check-icon {
-  background: #1a3d2b;
+  background: #0f3424;
   color: white;
   width: 18px;
   height: 18px;
@@ -71,37 +79,46 @@
 }
 
 .account-balance-display {
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 700;
   color: #111827;
-  margin: 12px 0 0 0;
+  margin: 10px 0 0 0;
 }
 
-/* Toggles */
+/* Toggles y Botones */
 .destination-type-toggle {
   display: flex;
   gap: 12px;
 }
 
 .toggle-btn {
-  padding: 14px 24px;
-  border-radius: 10px;
-  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #d1d5db;
+  background-color: white;
+  color: #4b5563;
+  transition: all 0.2s;
 }
 
 .toggle-btn.active {
-  background-color: #60a5fa;
+  background-color: #0f3424;
   color: white;
-  border-color: #60a5fa;
+  border-color: #0f3424;
 }
 
-.toggle-btn.disabled {
-  background-color: white;
-  color: #9ca3af;
-  cursor: not-allowed;
+.toggle-btn.cancel {
+  background-color: #f9fafb;
+}
+
+.toggle-btn.cancel:hover {
+  background-color: #f3f4f6;
+  color: #111827;
 }
 
 /* Inputs */
@@ -109,122 +126,142 @@
   width: 100%;
   padding: 14px;
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  background-color: #f3f4f6;
+  border: 1px solid #d1d5db;
+  background-color: #f9fafb;
   font-size: 14px;
   box-sizing: border-box;
   outline: none;
+  transition: all 0.2s;
 }
 
 .form-input-text:focus {
-  border-color: #1a3d2b;
+  border-color: #0f3424;
   background-color: white;
+  box-shadow: 0 0 0 3px rgba(15, 52, 36, 0.08);
 }
 
 .form-inline-group {
   display: flex;
-  gap: 16px;
+  gap: 20px;
 }
 
 .flex-1 { flex: 1; }
 
+/* 🎯 El símbolo ya no va superpuesto sobre el input con un padding-left fijo en px (se
+   superponía con el placeholder cuando el símbolo pasaba de "$" a "US$" en la cuenta en
+   dólares) — ahora vive como un elemento normal dentro del wrapper, que reserva su propio
+   ancho según el texto que tenga, sin importar cuántos caracteres sea. El borde/fondo que
+   antes tenía el input (heredados de .form-input-text) pasan a vivir acá. */
 .amount-input-wrapper {
-  position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background-color: #f9fafb;
+  transition: all 0.2s;
+}
+
+.amount-input-wrapper:focus-within {
+  border-color: #0f3424;
+  background-color: white;
+  box-shadow: 0 0 0 3px rgba(15, 52, 36, 0.08);
 }
 
 .currency-symbol {
-  position: absolute;
-  left: 16px;
+  padding-left: 14px;
   font-weight: 600;
-  color: #374151;
+  color: #4b5563;
+  white-space: nowrap;
 }
 
 .amount-input {
-  padding-left: 32px;
+  flex: 1;
+  min-width: 0;
+  padding-left: 6px !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
   font-weight: 600;
+  color: #111827;
 }
 
-/* Botón enviar */
+/* Botón enviar principal */
 .btn-submit-transfer {
   width: 100%;
   background-color: #0f3424;
   color: white;
   border: none;
   padding: 16px;
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(15, 52, 36, 0.2);
-  margin-top: 12px;
   transition: opacity 0.2s;
+  margin-top: 12px;
 }
 
 .btn-submit-transfer:hover:not(:disabled) {
   opacity: 0.9;
 }
 
-.btn-submit-transfer:disabled {
-  background-color: #9ca3af;
-  cursor: not-allowed;
-  box-shadow: none;
+/* 🎯 SIDEBAR FINA Y ALINEADA AL BORDE DERECHO DE LA PANTALLA */
+.transfer-sidebar-right {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
 }
 
-/* Banner Derecho */
 .security-banner-card {
-  background: linear-gradient(135deg, #112c1e 0%, #1a4d33 100%);
+  background: linear-gradient(135deg, #0f3424 0%, #154732 100%);
   color: white;
-  padding: 24px;
-  border-radius: 16px;
-  margin-bottom: 24px;
+  padding: 26px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+  box-sizing: border-box;
 }
 
-.security-banner-card h4 { margin: 0 0 8px 0; font-size: 15px; }
-.security-banner-card p { margin: 0; font-size: 12px; opacity: 0.8; line-height: 1.5; }
-
-.contacts-panel-card {
-  background: #f0f4f8;
-  padding: 24px;
-  border-radius: 16px;
+.security-banner-card.alternative-box {
+  background: linear-gradient(135deg, #11251c 0%, #1a382b 100%);
 }
 
-.contacts-panel-card h5 { margin: 0 0 16px 0; color: #374151; font-size: 14px; }
-
-.contact-item-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.contact-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background-color: #3b82f6;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.security-banner-card h4 {
+  margin: 0 0 12px 0;
+  font-size: 15px;
   font-weight: 600;
-  font-size: 12px;
 }
 
-.contact-avatar.alt-color { background-color: #34d399; }
-.contact-meta h6 { margin: 0; font-size: 13px; color: #111827; }
-.contact-meta span { font-size: 11px; color: #6b7280; }
+.security-banner-card p {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.85;
+  line-height: 1.6;
+}
 
-.btn-view-contacts {
-  background: none;
-  border: none;
-  color: #1a3d2b;
-  font-size: 12px;
+.transfer-info-label {
+  display: block;
+  font-size: 11px;
   font-weight: 600;
-  cursor: pointer;
-  padding: 0;
-  margin-top: 8px;
+  opacity: 0.7;
+  letter-spacing: 0.5px;
+  margin-top: 16px;
+}
+
+.security-banner-card .transfer-info-label:first-of-type {
+  margin-top: 0;
+}
+
+.transfer-info-saldo {
+  margin: 4px 0 0 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.transfer-info-dato {
+  margin: 4px 0 0 0;
+  font-size: 14px;
+  word-break: break-all;
 }
 
 /* Alertas */
@@ -235,84 +272,138 @@
   margin-bottom: 20px;
   font-weight: 500;
 }
-.form-alert.error { background-color: #fde8e8; color: #c81e1e; }
-.form-alert.exito { background-color: #def7ec; color: #03543f; }
+.form-alert.error { background-color: #fef2f2; color: #991b1b; }
 
-/* Pantalla de Éxito */
+/* Responsive */
+@media (max-width: 1024px) {
+  .transfer-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===== Pantalla de éxito / comprobante ===== */
 .success-screen-container {
   display: flex;
   justify-content: center;
-  align-items: center;
-  padding: 40px 0;
+  padding: 40px 20px;
+  animation: fadeIn 0.25s ease-in-out;
 }
 
 .success-card {
   background: white;
   border: 1px solid #e5e7eb;
-  border-radius: 20px;
+  border-radius: 16px;
   padding: 40px;
-  text-align: center;
-  max-width: 450px;
+  max-width: 480px;
   width: 100%;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  text-align: center;
 }
 
 .success-icon-circle {
-  width: 64px;
-  height: 64px;
-  background-color: #def7ec;
-  color: #03543f;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
+  background-color: #0f3424;
+  color: white;
+  font-size: 28px;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
-  font-weight: bold;
   margin: 0 auto 20px auto;
 }
 
 .success-card h2 {
-  color: #111827;
+  margin: 0 0 6px 0;
   font-size: 22px;
-  margin: 0 0 8px 0;
+  color: #111827;
 }
 
 .success-subtitle {
+  margin: 0 0 24px 0;
   color: #6b7280;
   font-size: 14px;
-  margin: 0 0 24px 0;
 }
 
 .success-details-box {
   background-color: #f9fafb;
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 32px;
-  border: 1px solid #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 8px 20px;
+  text-align: left;
+  margin-bottom: 24px;
 }
 
 .success-row {
   display: flex;
   justify-content: space-between;
-  font-size: 14px;
-  margin-bottom: 10px;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 13px;
+  color: #4b5563;
 }
-.success-row:last-child { margin-bottom: 0; }
 
-.success-row span { color: #6b7280; }
-.success-row strong { color: #111827; font-size: 16px; }
-.mono-text-id { font-family: monospace; color: #374151; font-weight: 600; }
+.success-row:last-child {
+  border-bottom: none;
+}
+
+.success-row span:last-child {
+  color: #111827;
+  font-weight: 600;
+  text-align: right;
+}
+
+.success-row.destacada strong {
+  font-size: 20px;
+  color: #0f3424;
+}
+
+.mono-text-id {
+  font-family: 'Courier New', monospace;
+  word-break: break-all;
+}
+
+.success-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn-success-comprobante {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background-color: white;
+  color: #0f3424;
+  border: 1px solid #0f3424;
+  padding: 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-success-comprobante:hover {
+  background-color: #f0fdf4;
+}
 
 .btn-success-return {
   background-color: #0f3424;
   color: white;
   border: none;
-  padding: 14px 28px;
+  padding: 14px;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  width: 100%;
-  transition: background 0.2s;
+  transition: opacity 0.2s;
 }
-.btn-success-return:hover { background-color: #154732; }
+
+.btn-success-return:hover {
+  opacity: 0.9;
+}

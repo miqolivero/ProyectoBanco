@@ -16,4 +16,6 @@ router.get('/sincronizar', movimientoController.sincronizarTransferenciasRecibid
 
 router.post('/depositar', movimientoController.realizarDeposito);
 
+router.get('/validar-destino/:destino', movimientoController.buscarTitularDestino);
+
 module.exports = router;

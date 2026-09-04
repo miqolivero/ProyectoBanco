@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useUser, useClerk } from '@clerk/clerk-react';
+import { TriangleAlert } from 'lucide-react';
 import logo from "../../assets/LogoMinimalista.png";
 import fondoSierras from "../../assets/screen.png";
 import './FormularioOnboarding.css'; // Importamos sus estilos independientes
@@ -88,9 +89,9 @@ const FormularioOnboarding = ({ onRegistroExitoso }) => {
       <div className="onboarding-left-img-col">
         <img src={fondoSierras} alt="Calamuchita" className="onboarding-bg-image" />
         <div className="onboarding-floating-text">
-          <h1 className="onboarding-floating-title">Tu futuro financiero en armonía con el mundo.</h1>
+          <h1 className="onboarding-floating-title">Comienza tu viaje hacia la serenidad financiera.</h1>
           <p className="onboarding-floating-desc">
-            Bienvenido a un banco que entiende la importancia de la estabilidad y la serenidad. Juntos, construiremos tu legado.
+           Únete a la comunidad que valora la estabilidad del bosque y la transparencia del agua. Tu futuro, arraigado en la confianza.
           </p>
         </div>
       </div>
@@ -113,7 +114,7 @@ const FormularioOnboarding = ({ onRegistroExitoso }) => {
           <h2>Completa tu perfil</h2>
           <p>Necesitamos unos datos adicionales para finalizar tu registro bancario.</p>
 
-          {errorMsg && <div className="error-alert-banco">⚠️ {errorMsg}</div>}
+          {errorMsg && <div className="error-alert-banco"><TriangleAlert size={16} /> {errorMsg}</div>}
 
           <form onSubmit={handleSubmit} className="form-banco">
             

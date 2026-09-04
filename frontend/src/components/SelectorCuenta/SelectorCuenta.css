@@ -1,0 +1,78 @@
+.selector-cuenta {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.selector-cuenta-opcion {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  background-color: #f9fafb;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.selector-cuenta-opcion:hover {
+  border-color: #0f3424;
+}
+
+.selector-cuenta-opcion.activa {
+  border-color: #0f3424;
+  background-color: #f0fdf4;
+  box-shadow: 0 0 0 2px rgba(15, 52, 36, 0.1);
+}
+
+.selector-cuenta-nombre {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.selector-cuenta-opcion.activa .selector-cuenta-nombre {
+  color: #0f3424;
+}
+
+.selector-cuenta-saldo {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.selector-cuenta-abrir-usd {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 200px;
+  border: 1px dashed #9ca3af;
+  border-radius: 10px;
+  background-color: white;
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.selector-cuenta-abrir-usd:hover:not(:disabled) {
+  border-color: #0f3424;
+  color: #0f3424;
+}
+
+.selector-cuenta-abrir-usd:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

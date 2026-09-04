@@ -192,3 +192,45 @@ exports.realizarDeposito = async (req, res) => {
         res.status(500).json({ error: "Error interno al procesar el depósito", detalle: error.message });
     }
 };
+exports.buscarTitularDestino = async (req, res) => {
+    const { destino } = req.params; // Puede ser CBU o Alias ingresado en el input
+
+    if (!destino) {
+        return res.status(400).json({ error: "Debe ingresar un CBU o Alias" });
+    }
+
+    const destinoLimpio = destino.trim();
+    const esAlias = !/^\d{22}$/.test(destinoLimpio);
+
+    // Definimos la URL correcta de la API del Profesor según lo ingresado
+    const urlCentral = esAlias 
+        ? `https://centralbank.brocoly.cc/api/persons/alias/${destinoLimpio}`
+        : `https://centralbank.brocoly.cc/api/persons/cbu/${destinoLimpio}`; // <-- Asumiendo que esta es la ruta por CBU
+
+    try {
+        const respuesta = await fetch(urlCentral, {
+            method: 'GET',
+            headers: {
+                'x-environment': 'test',
+                'x-api-key': process.env.CENTRAL_BANK_API_KEY
+            }
+        });
+
+        const datosPersona = await respuesta.json();
+
+        if (!respuesta.ok) {
+            return res.status(404).json({ error: "Destinatario no encontrado en la red central." });
+        }
+
+        // Devolvemos al frontend el nombre completo y el CBU real
+        return res.status(200).json({
+            nombre: `${datosPersona.firstName || ''} ${datosPersona.lastName || ''}`.trim() || datosPersona.name || "Titular No Especificado",
+            cbu: datosPersona.cbu || destinoLimpio,
+            banco: datosPersona.bankName || "Banco Destino"
+        });
+
+    } catch (error) {
+        console.error("❌ Error al buscar titular:", error.message);
+        return res.status(500).json({ error: "Error al consultar los datos del destinatario" });
+    }
+};
