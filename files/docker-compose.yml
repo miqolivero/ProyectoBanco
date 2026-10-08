@@ -11,7 +11,7 @@ services:
       - "5432:5432"
     volumes:
       # Mapeamos la carpeta init para que ejecute los scripts al arrancar
-      - ./init:/docker-entrypoint-initdb.d
+      - ../backend/init:/docker-entrypoint-initdb.d
       # Volumen para que los datos no se borren al apagar el contenedor
       - postgres_data:/var/lib/postgresql/data
 

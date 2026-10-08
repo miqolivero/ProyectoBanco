@@ -17,7 +17,7 @@ API REST construida con **Node.js + Express** y base de datos **PostgreSQL**, qu
 
 ## Esquema de la base de datos
 
-El esquema está definido en `init/01_schema.sql`. Se compone de **8 tablas**:
+El esquema está definido en `backend/init/01_schema.sql`. Se compone de **8 tablas**:
 
 ### Tablas maestras (lookup)
 
@@ -110,12 +110,12 @@ El esquema está definido en `init/01_schema.sql`. Se compone de **8 tablas**:
 
 ## Diagrama de entidad-relación (DER)
 
-Para visualizar el DER podés importar el script `init/01_schema.sql` en **[drawdb.app](https://drawdb.app)**:
+Para visualizar el DER podés importar el script `backend/init/01_schema.sql` en **[drawdb.app](https://drawdb.app)**:
 
 1. Abrí [drawdb.app](https://drawdb.app)
 2. Hacé clic en **Import SQL**
 3. Seleccioná el DBMS: **PostgreSQL**
-4. Pegá el contenido de `init/01_schema.sql`
+4. Pegá el contenido de `backend/init/01_schema.sql`
 5. El diagrama se genera automáticamente
 
 ### Relaciones clave
@@ -138,40 +138,65 @@ Productos ──o Tarjetas_Credito    (1:1)
 - Node.js >= 18
 - PostgreSQL >= 14
 
+### Estructura del repositorio
+
+El backend y el frontend son dos proyectos independientes, cada uno con su propio `package.json`, para poder desplegarlos por separado:
+
+```
+.
+├── backend/     # API REST (Node + Express)  → se despliega en Render
+├── frontend/    # SPA (React + Vite)         → se despliega en Vercel
+└── files/       # DER, colección de Postman, docs del Banco Central
+```
+
 ### Configuración
 
-Creá un archivo `.env` en la raíz del proyecto:
+Copiá `backend/.env.example` a `backend/.env` y completá los valores (como mínimo `DATABASE_URL`):
+
+```bash
+cp backend/.env.example backend/.env
+```
 
 ```env
 DATABASE_URL=postgres://postgres:admin123@localhost:5432/banco_db
 ```
 
+Para el frontend, lo mismo con `frontend/.env.example` → `frontend/.env` (en local puede quedar vacío: cae solo a `http://localhost:3001`).
+
 ### Instalación
 
+Hay que instalar las dependencias de cada proyecto por separado:
+
 ```bash
-npm install
+cd backend && npm install
+cd ../frontend && npm install
 ```
 
 ### Crear la base de datos y ejecutar los scripts
 
-Conectate a PostgreSQL y ejecutá los scripts en orden:
+Conectate a PostgreSQL y ejecutá los scripts en orden (desde la raíz del repo):
 
 ```bash
 # Crear la base de datos
 psql -U postgres -c "CREATE DATABASE banco_db;"
 
 # Ejecutar el schema (tablas + datos maestros)
-psql -U postgres -d banco_db -f init/01_schema.sql
+psql -U postgres -d banco_db -f backend/init/01_schema.sql
 
 # Cargar los datos de ejemplo
-psql -U postgres -d banco_db -f init/02_data.sql
+psql -U postgres -d banco_db -f backend/init/02_data.sql
 ```
 
-### Levantar el servidor
+### Levantar el proyecto
+
+Dos terminales, una por proyecto:
 
 ```bash
-node app.js
-# Servidor en http://localhost:3001
+# Terminal 1 — API en http://localhost:3001
+cd backend && npm run dev
+
+# Terminal 2 — frontend en http://localhost:5173
+cd frontend && npm run dev
 ```
 
 ---
@@ -186,8 +211,8 @@ El orden importa: cada servicio necesita la URL del anterior, así que hay que h
 
 1. Crear un proyecto nuevo en [supabase.com](https://supabase.com) y **guardar la contraseña de la base** que se genera (después no se puede volver a ver, solo resetear).
 2. En el **SQL Editor** del dashboard, pegar y ejecutar el contenido de los scripts **en este orden**:
-   - `init/01_schema.sql` (tablas + datos maestros)
-   - `init/02_data.sql` (datos de ejemplo)
+   - `backend/init/01_schema.sql` (tablas + datos maestros)
+   - `backend/init/02_data.sql` (datos de ejemplo)
 
    > ⚠️ `02_data.sql` no es idempotente (no tiene `ON CONFLICT`): si se corre dos veces falla por DNI/CBU duplicados. Correrlo una sola vez, sobre la base recién creada.
 
@@ -213,7 +238,7 @@ El orden importa: cada servicio necesita la URL del anterior, así que hay que h
 
 1. *New → Web Service* → conectar el repositorio.
 2. Configuración:
-   - **Root Directory**: vacío (la raíz del repo)
+   - **Root Directory**: `backend` ← el backend no está en la raíz del repo
    - **Build Command**: `npm install`
    - **Start Command**: `npm start`
    - **Health Check Path**: `/api/health`
@@ -274,13 +299,14 @@ Hasta que esto esté hecho, el front carga pero **todos los fetch fallan por COR
 
 - **Clerk**: las claves `pk_test_` / `sk_test_` son de una *instancia de desarrollo*. Funcionan en Vercel, pero muestran el cartel de "development mode" y tienen tope de usuarios. Para un despliegue "de verdad" hay que crear una instancia de producción en Clerk (claves `pk_live_`) y registrar ahí el dominio de Vercel.
 - **Secretos**: `.env` está en `.gitignore` y no debe commitearse nunca — las claves van únicamente en los paneles de Render y Vercel. Si alguna clave llegó a quedar en un commit, rotarla desde el panel del proveedor.
-- **`DEMO_MODE`**: si el proyecto queda público, conviene activarlo (ver `.env.example`) para que solo los CBU de prueba puedan generar transferencias y préstamos en la red compartida del Banco Central de la cátedra.
+- **`DEMO_MODE`**: si el proyecto queda público, conviene activarlo (ver `backend/.env.example`) para que solo los CBU de prueba puedan generar transferencias y préstamos en la red compartida del Banco Central de la cátedra.
+- **Despliegues cruzados**: los dos servicios salen del mismo repositorio, así que por defecto un push que solo toca el frontend igual dispara un redeploy del backend y viceversa. Si molesta, se puede filtrar: en Render con *Settings → Build Filters* (included path `backend/**`) y en Vercel con *Settings → Git → Ignored Build Step*.
 
 ---
 
 ## Datos de ejemplo
 
-Los datos de ejemplo están definidos en `init/02_data.sql`.
+Los datos de ejemplo están definidos en `backend/init/02_data.sql`.
 
 ### Roles cargados
 
@@ -307,7 +333,7 @@ Los datos de ejemplo están definidos en `init/02_data.sql`.
 | 3           | Ricardo | CAJA_AHORRO      | ACTIVO | Saldo USD $99.999,99        |
 | 4           | Ricardo | TARJETA_CREDITO  | ACTIVO | Visa, límite $2.500.000,00 |
 
-### Resultado de la consulta principal (`init/03_select.sql`)
+### Resultado de la consulta principal (`backend/init/03_select.sql`)
 
 | nombre  | apellido | producto         | estado | saldo_cuenta | limite_tarjeta |
 | ------- | -------- | ---------------- | ------ | ------------ | -------------- |
@@ -479,20 +505,38 @@ console.log(nuevaPersona);
 
 ```
 .
-├── app.js                  # Entry point, definición de rutas
-├── config/
-│   └── db.js               # Conexión a PostgreSQL (Pool)
-├── controllers/
-│   └── personaController.js
-├── models/
-│   └── personaModel.js     # Queries SQL
-├── routes/
-│   └── personaRoutes.js
-├── init/
-│   ├── 01_schema.sql       # DDL: creación de tablas
-│   ├── 02_data.sql         # DML: datos de ejemplo
-│   └── 03_select.sql       # Query de consulta principal
-└── .env                    # Variables de entorno (no commitear)
+├── backend/                    # API REST → Render
+│   ├── app.js                  # Entry point: CORS, montaje de rutas, health check
+│   ├── config/
+│   │   ├── db.js               # Conexión a PostgreSQL (Pool), SSL automático
+│   │   ├── centralBank.js      # Cliente de la API del Banco Central (cátedra)
+│   │   ├── externalApis.js     # APIs públicas (DolarAPI, ArgentinaDatos, data912)
+│   │   ├── asistenteIA.js      # Herramientas de solo-lectura del asistente IA
+│   │   └── demoMode.js         # Restricción opcional para despliegue público
+│   ├── controllers/            # Validación de entrada + respuesta JSON
+│   ├── models/                 # Queries SQL crudas y transacciones
+│   ├── routes/                 # Definición de endpoints
+│   ├── middlewares/
+│   │   └── auth.js             # Verificación de sesión Clerk + autorización por fila
+│   ├── utils/
+│   │   └── validaciones.js
+│   ├── init/
+│   │   ├── 01_schema.sql       # DDL: creación de tablas + datos maestros
+│   │   ├── 02_data.sql         # DML: datos de ejemplo
+│   │   └── 03_select.sql       # Query de consulta principal
+│   ├── package.json
+│   └── .env                    # Variables de entorno (no se commitea)
+│
+├── frontend/                   # SPA React + Vite → Vercel
+│   ├── src/
+│   │   ├── components/         # Una carpeta por pantalla (.jsx + .css)
+│   │   └── config/api.js       # URL base del backend + token de Clerk en cada fetch
+│   ├── package.json
+│   └── .env                    # VITE_API_URL, VITE_CLERK_PUBLISHABLE_KEY
+│
+├── files/                      # DER, colección de Postman, docs del Banco Central
+├── README.md
+└── Notas.txt                   # Bitácora de cómo fue evolucionando el proyecto
 ```
 
 ---
