@@ -9,8 +9,9 @@ API REST construida con **Node.js + Express** y base de datos **PostgreSQL**, qu
 1. [Esquema de la base de datos](#esquema-de-la-base-de-datos)
 2. [Diagrama de entidad-relación (DER)](#diagrama-de-entidad-relación-der)
 3. [Cómo levantar la base de datos](#cómo-levantar-la-base-de-datos)
-4. [Datos de ejemplo](#datos-de-ejemplo)
-5. [Endpoints](#endpoints)
+4. [Despliegue a producción](#despliegue-a-producción)
+5. [Datos de ejemplo](#datos-de-ejemplo)
+6. [Endpoints](#endpoints)
 
 ---
 
@@ -172,6 +173,108 @@ psql -U postgres -d banco_db -f init/02_data.sql
 node app.js
 # Servidor en http://localhost:3001
 ```
+
+---
+
+## Despliegue a producción
+
+Arquitectura del despliegue: **base de datos en Supabase**, **backend en Render**, **frontend en Vercel**.
+
+El orden importa: cada servicio necesita la URL del anterior, así que hay que hacerlo de abajo hacia arriba (base → backend → frontend) y al final volver a Render para cerrar el círculo del CORS.
+
+### 1. Base de datos — Supabase
+
+1. Crear un proyecto nuevo en [supabase.com](https://supabase.com) y **guardar la contraseña de la base** que se genera (después no se puede volver a ver, solo resetear).
+2. En el **SQL Editor** del dashboard, pegar y ejecutar el contenido de los scripts **en este orden**:
+   - `init/01_schema.sql` (tablas + datos maestros)
+   - `init/02_data.sql` (datos de ejemplo)
+
+   > ⚠️ `02_data.sql` no es idempotente (no tiene `ON CONFLICT`): si se corre dos veces falla por DNI/CBU duplicados. Correrlo una sola vez, sobre la base recién creada.
+
+3. Copiar la cadena de conexión: botón **Connect** del dashboard (o *Project Settings → Database*) → pestaña **Session pooler**.
+
+   Tiene esta forma, con puerto **5432** y host `pooler.supabase.com`:
+
+   ```
+   postgresql://postgres.<project-ref>:<TU-PASSWORD>@aws-0-<region>.pooler.supabase.com:5432/postgres
+   ```
+
+   **Por qué el Session pooler y no las otras dos opciones:**
+
+   | Opción | Puerto | Problema |
+   |---|---|---|
+   | Direct connection | 5432 (`db.<ref>.supabase.co`) | Es **IPv6 only**, y Render no tiene IPv6 saliente → falla con `ENOTFOUND` |
+   | Transaction pooler | 6543 | No soporta estado de sesión; este proyecto usa transacciones explícitas `BEGIN/COMMIT` y `SELECT ... FOR UPDATE` en todas las operaciones que mueven plata |
+   | **Session pooler** | **5432** (`pooler`) | ✅ Es IPv4 y se comporta igual que una conexión directa |
+
+   No hace falta agregarle `?sslmode=` ni `?pgbouncer=true`: `config/db.js` ya activa SSL automáticamente cuando la base no es `localhost`.
+
+### 2. Backend — Render
+
+1. *New → Web Service* → conectar el repositorio.
+2. Configuración:
+   - **Root Directory**: vacío (la raíz del repo)
+   - **Build Command**: `npm install`
+   - **Start Command**: `npm start`
+   - **Health Check Path**: `/api/health`
+3. Variables de entorno (*Environment*) — las mismas de `.env.example`, **menos `PORT`** (Render inyecta el suyo y `app.js` ya lo lee):
+
+   | Variable | Valor |
+   |---|---|
+   | `DATABASE_URL` | la cadena del Session pooler del paso 1 |
+   | `CENTRAL_BANK_API_KEY` | la key de la API de la cátedra |
+   | `CLERK_SECRET_KEY` | `sk_...` (del dashboard de Clerk) |
+   | `CLERK_PUBLISHABLE_KEY` | `pk_...` (la misma que usa el frontend) |
+   | `GEMINI_API_KEY` | la key de Google AI Studio |
+   | `FRONTEND_URL` | *(se completa en el paso 4)* |
+
+   Sin **las dos** claves de Clerk, todos los endpoints protegidos responden `503` (ver `middlewares/auth.js`).
+
+4. Verificar el deploy entrando a `https://<tu-app>.onrender.com/api/health`. Tiene que devolver:
+
+   ```json
+   { "ok": true, "db": "ok" }
+   ```
+
+   Si devuelve `{"ok": false, "db": "error"}`, el servidor levantó pero no llega a Supabase → revisar que `DATABASE_URL` sea la del **Session pooler** y que la contraseña esté bien.
+
+   > El plan gratuito de Render duerme el servicio después de ~15 minutos sin tráfico: el primer request después de eso puede tardar ~50 segundos en responder.
+
+### 3. Frontend — Vercel
+
+1. *Add New → Project* → importar el repositorio.
+2. Configuración:
+   - **Root Directory**: `frontend` ← importante, el frontend no está en la raíz del repo
+   - Framework Preset: **Vite** (se detecta solo), Build Command `npm run build`, Output Directory `dist`
+3. Variables de entorno:
+
+   | Variable | Valor |
+   |---|---|
+   | `VITE_API_URL` | `https://<tu-app>.onrender.com` (**sin barra final**) |
+   | `VITE_CLERK_PUBLISHABLE_KEY` | `pk_...` |
+
+   > ⚠️ Vite incrusta las variables `VITE_*` en el bundle **en tiempo de build**, no las lee en runtime: si cambiás una, hay que volver a desplegar para que tome efecto.
+
+### 4. Cerrar el círculo del CORS
+
+Volver a Render y setear `FRONTEND_URL` con el dominio de Vercel (sin barra final), por ejemplo `https://proyecto-banco.vercel.app`. Render redespliega solo al guardar.
+
+Hasta que esto esté hecho, el front carga pero **todos los fetch fallan por CORS** (ver la lista de orígenes permitidos en `app.js`).
+
+> Cada branch/PR en Vercel genera además su propia URL de preview, que **no** está en la lista de orígenes permitidos. Para probar en una preview hay que agregar ese dominio a `FRONTEND_URL` separado por coma, o probar directamente sobre el dominio de producción.
+
+### Checklist post-deploy
+
+- [ ] `/api/health` devuelve `{"ok": true, "db": "ok"}`
+- [ ] Se puede iniciar sesión con Clerk y el onboarding crea la persona en la base
+- [ ] Un depósito y una transferencia impactan en el saldo y aparecen en el historial
+- [ ] El asistente (Calamuchita IA) responde una consulta de saldo con el dato real
+
+### A tener en cuenta
+
+- **Clerk**: las claves `pk_test_` / `sk_test_` son de una *instancia de desarrollo*. Funcionan en Vercel, pero muestran el cartel de "development mode" y tienen tope de usuarios. Para un despliegue "de verdad" hay que crear una instancia de producción en Clerk (claves `pk_live_`) y registrar ahí el dominio de Vercel.
+- **Secretos**: `.env` está en `.gitignore` y no debe commitearse nunca — las claves van únicamente en los paneles de Render y Vercel. Si alguna clave llegó a quedar en un commit, rotarla desde el panel del proveedor.
+- **`DEMO_MODE`**: si el proyecto queda público, conviene activarlo (ver `.env.example`) para que solo los CBU de prueba puedan generar transferencias y préstamos en la red compartida del Banco Central de la cátedra.
 
 ---
 
@@ -367,50 +470,6 @@ console.log(nuevaPersona);
 ```json
 {
   "error": "duplicate key value violates unique constraint \"personas_dni_key\""
-}
-```
-
----
-
-### GET /api/tablas/:tabla
-
-Retorna todos los registros de una tabla sin joins. Útil para inspeccionar datos crudos.
-
-**Tablas disponibles**
-
-| `:tabla`            | Tabla DB           |
-|---------------------|--------------------|
-| `personas`          | Personas           |
-| `roles`             | Roles              |
-| `roles_x_personas`  | Roles_x_Personas   |
-| `tipos_producto`    | Tipos_Producto     |
-| `estados_producto`  | Estados_Producto   |
-| `productos`         | Productos          |
-| `cuentas_bancarias` | Cuentas_Bancarias  |
-| `tarjetas_credito`  | Tarjetas_Credito   |
-
-**Ejemplo con curl**
-
-```bash
-curl http://localhost:3001/api/tablas/productos
-```
-
-**Response exitoso — `200 OK`**
-
-```json
-[
-  { "id_producto": 1, "id_persona": 1, "id_tipo_producto": 1, "id_estado_producto": 1, "fecha_alta": "2024-01-01T00:00:00.000Z" },
-  { "id_producto": 2, "id_persona": 2, "id_tipo_producto": 2, "id_estado_producto": 1, "fecha_alta": "2024-01-01T00:00:00.000Z" },
-  { "id_producto": 3, "id_persona": 3, "id_tipo_producto": 1, "id_estado_producto": 1, "fecha_alta": "2024-01-01T00:00:00.000Z" },
-  { "id_producto": 4, "id_persona": 3, "id_tipo_producto": 3, "id_estado_producto": 1, "fecha_alta": "2024-01-01T00:00:00.000Z" }
-]
-```
-
-**Response de error — `404 Not Found`** (tabla no válida)
-
-```json
-{
-  "error": "Tabla 'foo' no encontrada"
 }
 ```
 

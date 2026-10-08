@@ -4,6 +4,8 @@ node_modules/
 # Variables de entorno
 .env
 .env.*
+!.env.example
+!**/.env.example
 
 
 # Logs
@@ -18,3 +20,7 @@ Thumbs.db
 # Editor
 .vscode/
 .idea/
+
+# Claude Code
+CLAUDE.md
+.claude/

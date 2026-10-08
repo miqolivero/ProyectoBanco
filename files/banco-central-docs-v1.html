@@ -1,0 +1,772 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Home Banking — Especificación completa</title>
+    <link rel="icon" href="data:," />
+    <style>
+      body { margin: 0; }
+      #cargando { font: 15px/1.5 system-ui, sans-serif; padding: 3rem; color: #64748b; }
+    </style>
+  </head>
+  <body>
+    <div id="app"><p id="cargando">Cargando la referencia…</p></div>
+
+    <!-- ↓↓↓ TODO EL SPEC ESTÁ ACÁ ADENTRO. Editá este JSON y recargá la página. ↓↓↓ -->
+    <script id="spec" type="application/json">
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Home Banking — Especificación completa",
+    "version": "1.1.0-propuesta",
+    "description": "**Propuesta de endpoints para la API del Banco Central.**\n\nTodos siguen el mismo formato: autenticación con `x-api-key`, header `x-environment` para elegir base, y la misma lógica de `201`/`200` cuando el recurso ya existía, así se puede sincronizar la base local sin duplicar registros.\n\nSolo le pedimos a la cátedra lo que es específico de los bancos del curso — nadie más lo tiene. Todo lo demás (cotizaciones, tasas, precios) sale de APIs públicas reales, ver la sección \"Fuentes externas\" más abajo.\n\n| Endpoint | Estado | Para qué |\n|---|---|---|\n| `POST /persons` | Ya existe | Registrar persona, devuelve el CBU de la caja en pesos |\n| `POST /accounts` | **Propuesto** | Abrir una caja de ahorro en la moneda que se pida (ARS o USD) |\n| `GET /persons/{dni}/accounts` | **Propuesto** | Listar las cuentas de una persona con sus CBU |\n| `GET /central-deudores/{cuit}` | **Propuesto** | Situación crediticia y deudas informadas de un titular |\n\nLos dos primeros propuestos son de escritura y lectura de cuentas; el último es una consulta pura (`GET`, cacheable) que el Banco Central ya tiene como dato porque es específico de los bancos del curso — ninguna API pública real puede saber quién le debe a quién entre nuestros bancos inventados.\n\n`POST /persons` está incluido tal como existe hoy, solo para mostrar cómo encaja el resto.\n\n## Convenciones que no son endpoints\n\nEstos dos puntos no se resuelven con un llamado a la API: son acuerdos que la cátedra comunica una sola vez, por fuera de este spec, y cada banco los usa después como una constante interna.\n\n| Convención | Cómo se entrega | Para qué |\n|---|---|---|\n| Código de entidad (3 dígitos) y rango de BIN | Asignación fija por grupo, comunicada por escrito (mail o planilla) | Armar CBU y números de tarjeta con formato válido |\n| Acciones que el asistente de IA puede resolver sin humano | Documento de política, no un endpoint | Definir qué puede hacer el chatbot de atención al cliente sin confirmación adicional |\n\n## Fuentes externas (no se le piden al Banco Central)\n\nTodo lo que existe en la realidad se consulta directo contra la API pública real, sin pasar por la cátedra:\n\n| Dato | Fuente | Endpoint |\n|---|---|---|\n| Cotización del dólar (oficial, blue, MEP, CCL, mayorista, tarjeta, cripto) | DolarAPI | `GET https://dolarapi.com/v1/dolares` |\n| Tasas de plazo fijo por banco (`tnaClientes` / `tnaNoClientes`) | ArgentinaDatos | `GET https://api.argentinadatos.com/v1/finanzas/tasas/plazoFijo` |\n| Tasas de préstamos personales por banco | ArgentinaDatos | `GET https://api.argentinadatos.com/v1/finanzas/creditos/prestamosPersonales` |\n| Valor diario de la UVA | ArgentinaDatos | `GET https://api.argentinadatos.com/v1/finanzas/indices/uva` |\n| Tasas y comisiones de tarjetas de crédito y caja de ahorro, por banco real | BCRA — Régimen de Transparencia | `GET https://api.bcra.gob.ar/estadisticas/v1.0/Transparencia` (ver Manual de Desarrollo del BCRA) |\n| Cotización de referencia de CEDEARs | data912 | `GET https://data912.com/live/arg_cedears` (verificar path exacto en la documentación de data912 antes de integrarlo) |\n\nTodas son públicas, gratuitas y no piden autenticación (excepto que la documentación de cada una indique lo contrario al momento de implementarlo — conviene revisarlas antes de dar por cerrado el contrato).\n\n## Lo que queda para resolver local, en cada banco\n\nNo tienen una API pública real detrás, así que no tiene sentido pedírselo a la cátedra: cada grupo lo mockea puertas adentro de su propio backend.\n\n- Recarga de celulares (simulación propia por operadora).\n- Empresas de servicios y sus facturas/deudas (catálogo y estado propios).\n- Cotización de primas de seguro de vida.\n- Umbral de monto para reportes de compliance.\n- Transferencias entre bancos de distintos grupos (si el curso decide habilitarlo más adelante, ahí sí vuelve a ser un pedido para la cátedra).\n\n## Estándar interno sugerido (referencia — no son endpoints del Banco Central)\n\nEsto **no se le pide a la cátedra** y **no son endpoints nuevos para el Banco Central** — es la forma en que cada banco arma su propia API, para que los diez bancos del curso sean comparables entre sí. Cada grupo lo aloja en su propio servidor y lo autentica como quiera (por ejemplo, con un token de sesión del cliente logueado). Los datos reales (dólar, tasas, UVA, CEDEARs) se consultan en el momento contra las APIs públicas de la sección anterior; acá solo se indica cuál usar en cada caso.\n\n### Tarjetas\n\n**`POST /tarjetas`** — Emitir una tarjeta\n  Emite una tarjeta de débito (ligada a una caja de ahorro por su CBU) o de crédito (con límite propio) para un cliente ya registrado.\n  Body: dni, tipo, cbuAsociado, limite\n  Devuelve: id, tipo, numeroEnmascarado, cbuAsociado, limite, estado\n\n**`GET /persons/{dni}/tarjetas`** — Listar tarjetas de una persona\n  Devuelve todas las tarjetas (débito y crédito) del cliente autenticado.\n  Devuelve: id, tipo, numeroEnmascarado, cbuAsociado, limite, estado\n\n**`POST /tarjetas/{id}/autorizaciones`** — Autorizar un consumo\n  Simula la autorización en tiempo real de una compra: valida saldo (débito) o límite disponible (crédito) y aprueba o rechaza.\n  Body: comercio, monto, cuotas\n  Devuelve: estado, motivo, id\n\n**`POST /tarjetas/{id}/bloqueo`** — Bloquear o desbloquear una tarjeta\n  Cambia el estado de la tarjeta. Es la acción típica que también dispara el asistente de atención al cliente con IA cuando un cliente reporta un robo o extravío.\n  Body: accion\n  Devuelve: id, tipo, numeroEnmascarado, cbuAsociado, limite, estado\n\n**`GET /tarjetas/{id}/resumen`** — Resumen de cuenta (solo crédito)\n  Devuelve el resumen mensual de una tarjeta de crédito: total a pagar, pago mínimo, vencimiento y CFT.\n  Devuelve: periodo, vencimiento, pagoMinimo, totalAPagar, cft\n\n\n### Cuentas\n\n**`POST /accounts/{cbu}/depositos`** — Depositar en una cuenta\n  Body: monto\n  Devuelve: fecha, tipo, monto, moneda, descripcion, categoria, saldo\n\n**`POST /accounts/{cbu}/extracciones`** — Extraer de una cuenta\n  Body: monto\n  Devuelve: fecha, tipo, monto, moneda, descripcion, categoria, saldo\n\n**`POST /accounts/{cbu}/cambio`** — Comprar o vender dólares\n  Convierte saldo entre la caja en ARS y la caja en USD de la misma persona, tomando la cotización de **DolarAPI** (`GET https://dolarapi.com/v1/dolares`) en el momento de la operación.\n  Body: operacion, monto\n  Devuelve: montoOrigen, montoDestino, cotizacionUsada\n\n**`GET /accounts/{cbu}/movimientos`** — Listar movimientos de una cuenta\n  Devuelve: fecha, tipo, monto, moneda, descripcion, categoria, saldo\n\n\n### Préstamos\n\n**`POST /prestamos/simulaciones`** — Simular un préstamo (sistema francés)\n  Calcula la cuota fija y la tabla de amortización con `C = M × [i×(1+i)ⁿ] / [(1+i)ⁿ−1]`. La TNA que se ofrezca conviene basarla en las tasas reales de **ArgentinaDatos** (`GET https://api.argentinadatos.com/v1/finanzas/creditos/prestamosPersonales`), no un número inventado.\n  Body: monto, plazoMeses, tna\n  Devuelve: cuota, tna, tea, cft, tabla\n\n**`POST /prestamos`** — Solicitar un préstamo\n  Body: dni, monto, plazoMeses, tna\n  Devuelve: id, dni, monto, plazoMeses, tna, estado, cuotas\n\n**`GET /prestamos/{id}`** — Detalle de un préstamo\n  Devuelve: id, dni, monto, plazoMeses, tna, estado, cuotas\n\n**`POST /prestamos/{id}/pagos`** — Pagar la próxima cuota\n  Devuelve: numero, capital, interes, cuota, saldo, estado\n\n**`POST /prestamos/{id}/precancelacion`** — Cancelar el préstamo antes de tiempo\n  Devuelve: id, dni, monto, plazoMeses, tna, estado, cuotas\n\n\n### Recargas\n\n**`POST /recargas`** — Recargar saldo prepago\n  Mock local: no hay una API real de las telcos accesible para el curso, así que cada banco simula su propia aprobación/rechazo.\n  Body: operadora, numero, monto\n  Devuelve: estado, id\n\n\n### Servicios\n\n**`GET /servicios/empresas`** — Listar empresas de servicios\n  Catálogo propio del banco (luz, gas, agua, internet, etc.). Mock local: no hay una API pública que centralice esto.\n  Devuelve: id, nombre, rubro\n\n**`GET /servicios/empresas/{id}/deuda`** — Consultar deuda de un cliente\n  Devuelve: importe, vencimiento, estado\n\n**`POST /servicios/empresas/{id}/pagos`** — Registrar el pago de una factura\n  Body: numeroCliente, importe\n  Devuelve: estado, numeroCliente, importe, fechaPago\n\n**`GET /servicios/empresas/{id}/deudores`** — Listar quién le debe a la empresa\n  Devuelve: numeroCliente, importe, vencimiento, estado\n\n\n### Inversiones\n\n**`POST /plazos-fijos`** — Constituir un plazo fijo\n  Interés simple: `interés = capital × TNA × días / 365`. La TNA de referencia conviene tomarla de **ArgentinaDatos** (`GET https://api.argentinadatos.com/v1/finanzas/tasas/plazoFijo`); el BCRA ya no fija un piso mínimo, cada banco define la suya.\n  Body: dni, capital, plazoDias, tna, tipo\n  Devuelve: id, capital, tna, fechaAlta, fechaVencimiento, tipo, estado\n\n**`GET /plazos-fijos/{id}`** — Detalle de un plazo fijo\n  Devuelve: id, capital, tna, fechaAlta, fechaVencimiento, tipo, estado\n\n**`GET /persons/{dni}/plazos-fijos`** — Listar plazos fijos de una persona\n  Devuelve: id, capital, tna, fechaAlta, fechaVencimiento, tipo, estado\n\n**`GET /inversiones/cedears`** — Catálogo de CEDEARs con cotización\n  Cotización de referencia tomada de **data912** (`GET https://data912.com/live/arg_cedears` — verificar el path exacto en su documentación) o de un mock propio si no se integra la API real.\n  Devuelve: ticker, ratio, precioARS\n\n**`POST /inversiones/cedears/ordenes`** — Comprar o vender un CEDEAR\n  Body: dni, ticker, cantidad, tipo\n  Devuelve: id, ticker, cantidad, tipo, precio, estado\n\n**`GET /persons/{dni}/portafolio-cedears`** — Tenencia de CEDEARs de una persona\n  Devuelve: ticker, cantidad, precioPromedio\n\n\n### Seguros\n\n**`GET /seguros/productos`** — Catálogo de seguros ofrecidos\n  Devuelve: id, nombre\n\n**`GET /seguros/primas`** — Cotizar prima de referencia\n  Fórmula simplificada por edad y suma asegurada — no hace falta una tabla actuarial real para el proyecto.\n  Devuelve: prima\n\n**`POST /seguros/polizas`** — Contratar una póliza\n  Body: dni, productoId, sumaAsegurada, beneficiarios\n  Devuelve: id, dni, productoId, sumaAsegurada, prima, beneficiarios, estado\n\n**`POST /seguros/polizas/{id}/siniestros`** — Iniciar una denuncia de siniestro\n  Devuelve: id, polizaId, estado, fechaDenuncia\n\n\n### Ahorros\n\n**`POST /accounts/{cbu}/reservas`** — Crear una reserva\n  Bolsillo dentro de la misma cuenta, al estilo \"Reservas\" de Mercado Pago: separa dinero sin sacarlo de la cuenta principal.\n  Body: nombre, montoObjetivo, fechaMeta\n  Devuelve: id, nombre, montoObjetivo, saldoActual, fechaMeta\n\n**`GET /accounts/{cbu}/reservas`** — Listar reservas de una cuenta\n  Devuelve: id, nombre, montoObjetivo, saldoActual, fechaMeta\n\n**`POST /accounts/{cbu}/reservas/{id}/aportes`** — Aportar dinero a una reserva\n  Mueve fondos del saldo disponible de la cuenta hacia la reserva, sin afectar el resto de las operaciones.\n  Body: monto\n  Devuelve: id, nombre, montoObjetivo, saldoActual, fechaMeta\n\n\n### Reportes\n\n**`GET /accounts/{cbu}/resumen-gastos`** — Gastos agrupados por categoría\n  Devuelve: periodo, categorias\n\n**`GET /accounts/{cbu}/movimientos/exportar`** — Exportar movimientos\n  Devuelve el archivo de movimientos en el formato pedido, para descargar desde la app.\n\n\n### Atención al Cliente\n\n**`POST /chat/mensajes`** — Enviar un mensaje al asistente\n  El texto se interpreta con un modelo de lenguaje (por ejemplo, vía la API de Claude). El asistente puede consultar datos del cliente autenticado y ejecutar acciones simples (como bloquear una tarjeta) según la política de acciones autónomas que defina la cátedra — ver la sección \"Convenciones que no son endpoints\" más arriba en este mismo documento.\n  Body: texto\n  Devuelve: respuesta, accionesEjecutadas, requiereHumano\n\n**`POST /chat/escalamientos`** — Derivar la conversación a un humano\n  Devuelve: estado, id\n\n"
+  },
+  "servers": [
+    {
+      "url": "https://centralbank.brocoly.cc/api",
+      "description": "Banco Central"
+    }
+  ],
+  "security": [
+    {
+      "apiKeyAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Personas",
+      "description": "Alta de personas físicas."
+    },
+    {
+      "name": "Cuentas",
+      "description": "Cajas de ahorro de una persona ya registrada, en pesos o en dólares."
+    },
+    {
+      "name": "Central de Deudores",
+      "description": "Situación crediticia y deudas informadas por las entidades."
+    }
+  ],
+  "paths": {
+    "/persons": {
+      "post": {
+        "tags": [
+          "Personas"
+        ],
+        "operationId": "registrarPersona",
+        "summary": "Registrar persona",
+        "description": "Registra una persona física en el banco autenticado y devuelve su CBU de 22 dígitos.\n\n**Casos posibles según el DNI:**\n\n| Situación | Resultado |\n|---|---|\n| DNI nuevo en tu banco | `201` — persona creada, CBU generado |\n| DNI ya existe en **tu** banco | `200` — se devuelven los datos existentes para que puedas sincronizar tu BD local |\n| DNI ya existe en **otro** banco | `201` — se crea igual con un CBU propio de tu banco |\n\nEl CBU que devuelve corresponde a la caja de ahorro **en pesos**. Para abrir la de dólares, ver `POST /accounts`.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/XEnvironment"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "nombre",
+                  "apellido",
+                  "dni"
+                ],
+                "properties": {
+                  "nombre": {
+                    "type": "string",
+                    "examples": [
+                      "Juan"
+                    ]
+                  },
+                  "apellido": {
+                    "type": "string",
+                    "examples": [
+                      "Pérez"
+                    ]
+                  },
+                  "dni": {
+                    "type": "string",
+                    "examples": [
+                      "30123456"
+                    ]
+                  }
+                }
+              },
+              "examples": {
+                "alta": {
+                  "value": {
+                    "nombre": "Juan",
+                    "apellido": "Pérez",
+                    "dni": "30123456"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Persona creada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Persona"
+                },
+                "examples": {
+                  "creada": {
+                    "value": {
+                      "cbu": "0010001430123456000105",
+                      "nombre": "Juan",
+                      "apellido": "Pérez",
+                      "dni": "30123456",
+                      "alias": "juan.perez.banco1"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "El DNI ya estaba registrado en tu banco. Se devuelven los datos existentes para sincronizar tu BD local.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Persona"
+                },
+                "examples": {
+                  "yaExistia": {
+                    "value": {
+                      "message": "Persona ya registrada en tu banco — datos devueltos para sincronización",
+                      "cbu": "0010001430123456000105",
+                      "nombre": "Juan",
+                      "apellido": "Pérez",
+                      "dni": "30123456",
+                      "alias": "juan.perez.banco1"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/NoAutorizado"
+          }
+        }
+      }
+    },
+    "/accounts": {
+      "post": {
+        "tags": [
+          "Cuentas"
+        ],
+        "operationId": "abrirCuenta",
+        "summary": "Abrir caja de ahorro (ARS o USD)",
+        "description": "> **Propuesto.** Este endpoint todavía no existe.\n\nAbre una caja de ahorro para una persona **ya registrada** y devuelve el CBU de esa cuenta. La moneda se elige con el campo `moneda` del body: un mismo DNI puede tener una caja en `ARS` y otra en `USD`, cada una con su propio CBU y su propio alias.\n\n**Casos posibles:**\n\n| Situación | Resultado |\n|---|---|\n| La persona no tiene caja en esa moneda | `201` — cuenta creada, CBU generado |\n| Ya tiene caja en esa moneda en **tu** banco | `200` — se devuelven los datos existentes para sincronizar tu BD local |\n| Ya tiene caja en esa moneda en **otro** banco | `201` — se crea igual con un CBU propio de tu banco |\n| El DNI no está registrado | `404` — registralo primero con `POST /persons` |\n\nEs `POST` porque cada llamada crea una cuenta nueva y el CBU lo genera el Banco Central. La respuesta `200` sirve para lo mismo que en `POST /persons`: si borraste la cuenta de tu base local durante las pruebas, volvés a llamar y recuperás el CBU original sin duplicar el registro.\n\nUn solo endpoint con `moneda` en el body, y no dos rutas separadas, porque la moneda es un atributo de la cuenta: si mañana se suma `EUR`, alcanza con agregar un valor al enum.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/XEnvironment"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "dni",
+                  "moneda"
+                ],
+                "properties": {
+                  "dni": {
+                    "type": "string",
+                    "description": "DNI de una persona ya registrada.",
+                    "examples": [
+                      "30123456"
+                    ]
+                  },
+                  "moneda": {
+                    "$ref": "#/components/schemas/Moneda"
+                  },
+                  "alias": {
+                    "type": "string",
+                    "description": "Alias elegido. Si se omite, lo genera el Banco Central.",
+                    "examples": [
+                      "juan.perez.usd.banco1"
+                    ]
+                  }
+                }
+              },
+              "examples": {
+                "dolares": {
+                  "summary": "Caja de ahorro en dólares",
+                  "value": {
+                    "dni": "30123456",
+                    "moneda": "USD"
+                  }
+                },
+                "pesos": {
+                  "summary": "Caja de ahorro en pesos",
+                  "value": {
+                    "dni": "30123456",
+                    "moneda": "ARS"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Cuenta creada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cuenta"
+                },
+                "examples": {
+                  "creadaUsd": {
+                    "value": {
+                      "cbu": "0010001430123456000203",
+                      "alias": "juan.perez.usd.banco1",
+                      "dni": "30123456",
+                      "nombre": "Juan",
+                      "apellido": "Pérez",
+                      "moneda": "USD",
+                      "saldo": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "La persona ya tenía una caja de ahorro en esa moneda en tu banco. Se devuelven los datos existentes para sincronizar tu BD local.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cuenta"
+                },
+                "examples": {
+                  "yaExistia": {
+                    "value": {
+                      "message": "Cuenta ya registrada en tu banco — datos devueltos para sincronización",
+                      "cbu": "0010001430123456000203",
+                      "alias": "juan.perez.usd.banco1",
+                      "dni": "30123456",
+                      "nombre": "Juan",
+                      "apellido": "Pérez",
+                      "moneda": "USD",
+                      "saldo": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Falta un campo o la moneda no es válida.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "monedaInvalida": {
+                    "value": {
+                      "message": "Moneda no soportada. Valores válidos: ARS, USD"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/NoAutorizado"
+          },
+          "404": {
+            "description": "El DNI no está registrado en el Banco Central.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "sinPersona": {
+                    "value": {
+                      "message": "Persona no encontrada. Registrala primero con POST /persons"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/persons/{dni}/accounts": {
+      "get": {
+        "tags": [
+          "Cuentas"
+        ],
+        "operationId": "listarCuentas",
+        "summary": "Listar cuentas de una persona",
+        "description": "> **Propuesto.** Este endpoint todavía no existe.\n\nDevuelve todas las cajas de ahorro de una persona en el banco autenticado: la de pesos y la de dólares, cada una con su CBU. Sirve para volver a armar la base local sin tener que adivinar qué cuentas existen.",
+        "parameters": [
+          {
+            "name": "dni",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "examples": [
+                "30123456"
+              ]
+            }
+          },
+          {
+            "$ref": "#/components/parameters/XEnvironment"
+          },
+          {
+            "name": "moneda",
+            "in": "query",
+            "required": false,
+            "description": "Filtra por moneda. Si se omite, devuelve todas.",
+            "schema": {
+              "$ref": "#/components/schemas/Moneda"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado de cuentas. Si la persona no tiene ninguna, `cuentas` viene vacío.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "cuentas"
+                  ],
+                  "properties": {
+                    "cuentas": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Cuenta"
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "dosCuentas": {
+                    "summary": "Una caja en pesos y una en dólares",
+                    "value": {
+                      "cuentas": [
+                        {
+                          "cbu": "0010001430123456000105",
+                          "alias": "juan.perez.banco1",
+                          "dni": "30123456",
+                          "nombre": "Juan",
+                          "apellido": "Pérez",
+                          "moneda": "ARS",
+                          "saldo": 184500.2
+                        },
+                        {
+                          "cbu": "0010001430123456000203",
+                          "alias": "juan.perez.usd.banco1",
+                          "dni": "30123456",
+                          "nombre": "Juan",
+                          "apellido": "Pérez",
+                          "moneda": "USD",
+                          "saldo": 0
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/NoAutorizado"
+          },
+          "404": {
+            "description": "El DNI no está registrado en el Banco Central.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/central-deudores/{cuit}": {
+      "get": {
+        "tags": [
+          "Central de Deudores"
+        ],
+        "operationId": "getSituacionCrediticia",
+        "summary": "Situación crediticia",
+        "description": "> **Propuesto.** Este endpoint todavía no existe.\n\nDevuelve la situación crediticia de un titular y el detalle de las deudas que informó cada entidad. Es la consulta que hace el banco **antes** de abrir una cuenta o dar un crédito: un titular en situación 3 o peor no debería poder operar.\n\nLa `situacion` del titular es la **peor** de todas sus deudas. Si informa 1 en un banco y 4 en otro, el titular está en 4.\n\n| Situación | Significado |\n|---|---|\n| `1` | Normal |\n| `2` | Riesgo bajo / seguimiento especial |\n| `3` | Riesgo medio / con problemas |\n| `4` | Riesgo alto de insolvencia |\n| `5` | Irrecuperable |\n\n**Casos posibles según el CUIT:**\n\n| Situación | Resultado |\n|---|---|\n| CUIT con deudas informadas | `200` — situación y detalle por entidad |\n| CUIT registrado sin deudas | `200` — `situacion: 1` y `deudas: []` |\n| CUIT no registrado en el Banco Central | `404` |\n| CUIT mal formado | `400` |\n\nCon `x-environment: test` los datos son simulados y estables, así se puede probar cada situación sin depender de datos reales.",
+        "parameters": [
+          {
+            "name": "cuit",
+            "in": "path",
+            "required": true,
+            "description": "CUIT del titular, con o sin guiones.",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{2}-?\\d{8}-?\\d$",
+              "examples": [
+                "20301234563"
+              ]
+            }
+          },
+          {
+            "$ref": "#/components/parameters/XEnvironment"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Situación encontrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SituacionCrediticia"
+                },
+                "examples": {
+                  "normal": {
+                    "summary": "Titular en situación normal",
+                    "value": {
+                      "cuit": "20301234563",
+                      "situacion": 1,
+                      "deudas": [
+                        {
+                          "entidad": "Banco de la Nación Argentina",
+                          "monto": 152340.55,
+                          "situacion": 1
+                        },
+                        {
+                          "entidad": "Banco Galicia",
+                          "monto": 89000,
+                          "situacion": 1
+                        }
+                      ]
+                    }
+                  },
+                  "irregular": {
+                    "summary": "Titular con una deuda irregular",
+                    "value": {
+                      "cuit": "27301234564",
+                      "situacion": 4,
+                      "deudas": [
+                        {
+                          "entidad": "Banco Galicia",
+                          "monto": 45000,
+                          "situacion": 1
+                        },
+                        {
+                          "entidad": "Tarjeta Naranja",
+                          "monto": 1250000.75,
+                          "situacion": 4
+                        }
+                      ]
+                    }
+                  },
+                  "sinDeudas": {
+                    "summary": "Titular sin deudas informadas",
+                    "value": {
+                      "cuit": "20111111112",
+                      "situacion": 1,
+                      "deudas": []
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El CUIT no tiene 11 dígitos o el formato es inválido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "formato": {
+                    "value": {
+                      "message": "CUIT inválido. Se esperan 11 dígitos, con o sin guiones"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/NoAutorizado"
+          },
+          "404": {
+            "description": "El CUIT no figura en la central de deudores.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "noExiste": {
+                    "value": {
+                      "message": "CUIT no encontrado en la central de deudores"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "apiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key",
+        "description": "Token secreto del banco. Va en el header `x-api-key`."
+      }
+    },
+    "parameters": {
+      "XEnvironment": {
+        "name": "x-environment",
+        "in": "header",
+        "required": false,
+        "description": "Base de datos destino. Usar `test` durante el desarrollo.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "prod",
+            "test"
+          ],
+          "default": "prod"
+        }
+      }
+    },
+    "responses": {
+      "NoAutorizado": {
+        "description": "Falta el header `x-api-key` o el token no es válido.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Moneda": {
+        "type": "string",
+        "description": "Moneda de la cuenta, según ISO 4217.",
+        "enum": [
+          "ARS",
+          "USD"
+        ],
+        "examples": [
+          "USD"
+        ]
+      },
+      "Cbu": {
+        "type": "string",
+        "description": "Clave Bancaria Uniforme, 22 dígitos. Cada cuenta tiene el suyo, así que la caja en pesos y la de dólares de una misma persona tienen CBU distinto.",
+        "pattern": "^\\d{22}$",
+        "examples": [
+          "0010001430123456000203"
+        ]
+      },
+      "Persona": {
+        "type": "object",
+        "required": [
+          "cbu",
+          "nombre",
+          "apellido",
+          "dni"
+        ],
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Solo viene en las respuestas `200`."
+          },
+          "cbu": {
+            "$ref": "#/components/schemas/Cbu"
+          },
+          "nombre": {
+            "type": "string",
+            "examples": [
+              "Juan"
+            ]
+          },
+          "apellido": {
+            "type": "string",
+            "examples": [
+              "Pérez"
+            ]
+          },
+          "dni": {
+            "type": "string",
+            "examples": [
+              "30123456"
+            ]
+          },
+          "alias": {
+            "type": "string",
+            "examples": [
+              "juan.perez.banco1"
+            ]
+          }
+        }
+      },
+      "Cuenta": {
+        "type": "object",
+        "required": [
+          "cbu",
+          "dni",
+          "moneda"
+        ],
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Solo viene en las respuestas `200`."
+          },
+          "cbu": {
+            "$ref": "#/components/schemas/Cbu"
+          },
+          "alias": {
+            "type": "string",
+            "examples": [
+              "juan.perez.usd.banco1"
+            ]
+          },
+          "dni": {
+            "type": "string",
+            "examples": [
+              "30123456"
+            ]
+          },
+          "nombre": {
+            "type": "string",
+            "examples": [
+              "Juan"
+            ]
+          },
+          "apellido": {
+            "type": "string",
+            "examples": [
+              "Pérez"
+            ]
+          },
+          "moneda": {
+            "$ref": "#/components/schemas/Moneda"
+          },
+          "saldo": {
+            "type": "number",
+            "description": "Saldo actual, en la moneda de la cuenta.",
+            "examples": [
+              0
+            ]
+          }
+        }
+      },
+      "Situacion": {
+        "type": "integer",
+        "description": "Situación crediticia del 1 (normal) al 5 (irrecuperable).",
+        "minimum": 1,
+        "maximum": 5,
+        "examples": [
+          1
+        ]
+      },
+      "Deuda": {
+        "type": "object",
+        "required": [
+          "entidad",
+          "monto",
+          "situacion"
+        ],
+        "properties": {
+          "entidad": {
+            "type": "string",
+            "description": "Entidad financiera que informó la deuda.",
+            "examples": [
+              "Banco Galicia"
+            ]
+          },
+          "monto": {
+            "type": "number",
+            "description": "Monto informado, en pesos.",
+            "minimum": 0,
+            "examples": [
+              89000
+            ]
+          },
+          "situacion": {
+            "$ref": "#/components/schemas/Situacion"
+          }
+        }
+      },
+      "SituacionCrediticia": {
+        "type": "object",
+        "required": [
+          "cuit",
+          "situacion",
+          "deudas"
+        ],
+        "properties": {
+          "cuit": {
+            "type": "string",
+            "examples": [
+              "20301234563"
+            ]
+          },
+          "situacion": {
+            "$ref": "#/components/schemas/Situacion"
+          },
+          "deudas": {
+            "type": "array",
+            "description": "Deudas informadas por cada entidad. Array vacío si no hay ninguna.",
+            "items": {
+              "$ref": "#/components/schemas/Deuda"
+            }
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "examples": [
+              "Persona no encontrada"
+            ]
+          }
+        }
+      }
+    }
+  }
+}
+    </script>
+    <!-- ↑↑↑ FIN DEL SPEC ↑↑↑ -->
+
+    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+    <script>
+      Scalar.createApiReference('#app', {
+        content: document.getElementById('spec').textContent,
+        theme: 'default',
+        darkMode: true,
+        defaultHttpClient: { targetKey: 'shell', clientKey: 'curl' }
+      });
+    </script>
+  </body>
+</html>
