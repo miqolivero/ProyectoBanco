@@ -1,0 +1,223 @@
+.asistente-container {
+  padding: 20px 40px;
+  animation: fadeIn 0.2s ease-in-out;
+  max-width: 780px;
+}
+
+.asistente-eyebrow {
+  display: block;
+  font-size: 12.5px;
+  font-style: italic;
+  color: #0f3424;
+  opacity: 0.6;
+  margin-bottom: 6px;
+}
+
+.asistente-header-box h2 {
+  margin: 0 0 4px 0;
+  font-size: 24px;
+  color: #111827;
+}
+
+.asistente-header-box p {
+  color: #1a5c3f;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  background: linear-gradient(90deg, #eefdf4, rgba(238, 253, 244, 0));
+  border-left: 3px solid #2e7d4f;
+  padding: 8px 14px;
+  border-radius: 0 8px 8px 0;
+  margin: 0 0 24px 0;
+}
+
+.asistente-chat-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.asistente-mensajes {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px;
+  max-height: 480px;
+  min-height: 240px;
+  overflow-y: auto;
+}
+
+.asistente-mensaje-fila {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 85%;
+}
+
+.asistente-mensaje-fila.usuario {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.asistente-avatar {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.asistente-mensaje-fila.asistente .asistente-avatar {
+  background: #0f3424;
+  color: white;
+}
+
+.asistente-mensaje-fila.usuario .asistente-avatar {
+  background: #e5e7eb;
+  color: #4b5563;
+}
+
+.asistente-burbuja {
+  padding: 11px 15px;
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.asistente-mensaje-fila.asistente .asistente-burbuja {
+  background: #f0fdf4;
+  color: #111827;
+  border-bottom-left-radius: 4px;
+}
+
+.asistente-mensaje-fila.usuario .asistente-burbuja {
+  background: #0f3424;
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.asistente-burbuja-cargando {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #6b7280;
+}
+
+.asistente-spin {
+  animation: asistente-girar 0.8s linear infinite;
+}
+
+@keyframes asistente-girar {
+  to { transform: rotate(360deg); }
+}
+
+.asistente-sugerencias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 24px 18px 24px;
+}
+
+.asistente-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 12.5px;
+  color: #374151;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.asistente-chip:hover:not(:disabled) {
+  background: #f0fdf4;
+  border-color: #0f3424;
+  color: #0f3424;
+}
+
+.asistente-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.asistente-error {
+  margin: 0 24px 14px 24px;
+  padding: 10px 14px;
+  background: #fef2f2;
+  color: #991b1b;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.asistente-input-row {
+  display: flex;
+  gap: 10px;
+  padding: 16px 20px;
+  border-top: 1px solid #f3f4f6;
+  background: #fafafa;
+}
+
+.asistente-input {
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  background: white;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.asistente-input:focus {
+  border-color: #0f3424;
+  box-shadow: 0 0 0 3px rgba(15, 52, 36, 0.08);
+}
+
+.asistente-input:disabled {
+  background: #f3f4f6;
+}
+
+.asistente-btn-enviar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #0f3424;
+  color: white;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.2s;
+}
+
+.asistente-btn-enviar:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.asistente-btn-enviar:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+  .asistente-container {
+    padding: 16px 20px;
+  }
+
+  .asistente-mensaje-fila {
+    max-width: 95%;
+  }
+}
