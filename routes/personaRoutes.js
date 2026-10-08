@@ -1,16 +1,25 @@
 const express = require('express');
 const router = express.Router();
 const personaController = require('../controllers/personaController');
+const { requireAuth } = require('../middlewares/auth');
 
-// Rutas de consulta y creación
-router.get('/', personaController.obtenerPersonas);
+// 🎯 POST '/' (registro) y las rutas /clerk|verificar/:clerkId NO llevan requireAuth: se llaman
+// antes de que exista un registro local de la persona (es justamente lo que crean/consultan),
+// así que requireAuth (que busca esa fila) rompería el flujo de onboarding. Cada una hace su
+// propia verificación liviana contra la sesión de Clerk — ver personaController.js.
+router.get('/', requireAuth, personaController.obtenerPersonas);
 router.post('/', personaController.crearPersona);
-router.get('/:id/roles', personaController.obtenerRoles);
-router.get('/:id/productos', personaController.obtenerProductos);
+router.get('/:id/roles', requireAuth, personaController.obtenerRoles);
+router.get('/:id/productos', requireAuth, personaController.obtenerProductos);
+router.get('/:id/cuenta-usd', requireAuth, personaController.obtenerCuentaUSD);
+router.post('/:id/cuenta-usd', requireAuth, personaController.abrirCuentaUSD);
 router.get('/clerk/:clerkId', personaController.obtenerPorClerk);
 
 router.get('/verificar/:clerkId', personaController.obtenerPorClerk);
 // RUTA PARA ALIAS: El CBU viaja en la URL
-router.put('/:cbu/alias', personaController.cambiarAlias);
+router.put('/:cbu/alias', requireAuth, personaController.cambiarAlias);
+
+// AJUSTES DE PERFIL: email / teléfono / dirección
+router.put('/:id/perfil', requireAuth, personaController.actualizarPerfil);
 
 module.exports = router;

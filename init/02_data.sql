@@ -32,5 +32,24 @@ INSERT INTO Cuentas_Bancarias (id_producto, cbu, alias, moneda, saldo) VALUES
 (3, '0000003100011122233303', 'BASTA.CHICOS', 'USD', 99999.99);
 
 -- 7. DETALLES DE TARJETAS DE CRÉDITO
-INSERT INTO Tarjetas_Credito (id_producto, numero_tarjeta, marca, fecha_vencimiento, limite_compra, dia_cierre) VALUES 
+INSERT INTO Tarjetas_Credito (id_producto, numero_tarjeta, marca, fecha_vencimiento, limite_compra, dia_cierre) VALUES
 (4, '4507123456789012', 'Visa', '2030-12-01', 2500000.00, 20);
+
+-- 8. EMPRESAS DE SERVICIO (catálogo mock del banco)
+INSERT INTO Empresas_Servicio (nombre, rubro) VALUES
+('Epec', 'Electricidad'),
+('Ecogas', 'Gas'),
+('Aguas Villa Maria', 'Agua'),
+('Fibertel', 'Internet'),
+('Flow', 'TV');
+
+-- 9. FACTURAS DE SERVICIO DE EJEMPLO (pendientes, para poder probar el pago)
+INSERT INTO Facturas_Servicio (id_empresa, id_persona, numero_cliente, importe, vencimiento, estado) VALUES
+(1, 1, '12345', 8500.00, CURRENT_DATE + INTERVAL '10 days', 'PENDIENTE'),
+(2, 1, '67890', 4200.50, CURRENT_DATE + INTERVAL '5 days', 'PENDIENTE');
+
+-- 10. PRODUCTOS DE SEGURO (catálogo del banco)
+INSERT INTO Productos_Seguro (nombre, descripcion) VALUES
+('Vida', 'Cobertura por fallecimiento o invalidez total, con beneficiarios designados.'),
+('Hogar', 'Cobertura de incendio, robo y daños en tu vivienda.'),
+('Accidentes Personales', 'Indemnización por accidentes con incapacidad temporal o permanente.');

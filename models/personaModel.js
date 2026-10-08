@@ -19,6 +19,29 @@ class Persona {
         return res.rows.length > 0 ? res.rows[0] : null;
     }
 
+    // 🎯 Usada por el middleware de autenticación (middlewares/auth.js): a diferencia de
+    // getByClerkId (que hace un JOIN y devuelve una sola fila — se pierde la cuenta USD si la
+    // persona tiene dos cajas de ahorro), esta trae TODOS los CBU que le pertenecen a la
+    // persona, para poder validar "¿este CBU es realmente tuyo?" sin importar en qué moneda esté.
+    static async getIdentidadCompleta(clerkId) {
+        const resPersona = await pool.query(
+            'SELECT id, dni, nombre, apellido FROM Personas WHERE clerk_id = $1',
+            [clerkId]
+        );
+        if (resPersona.rows.length === 0) return null;
+        const persona = resPersona.rows[0];
+
+        const resCbus = await pool.query(
+            `SELECT cb.cbu, cb.moneda
+             FROM Cuentas_Bancarias cb
+             JOIN Productos pr ON pr.id_producto = cb.id_producto
+             WHERE pr.id_persona = $1`,
+            [persona.id]
+        );
+
+        return { ...persona, cbus: resCbus.rows };
+    }
+
     static async getRoles(id) {
         const res = await pool.query('SELECT * FROM Roles_Personas WHERE id_persona = $1', [id]);
         return res.rows;
@@ -29,6 +52,11 @@ class Persona {
         return res.rows;
     }
     
+    static async getById(id) {
+        const res = await pool.query('SELECT * FROM Personas WHERE id = $1', [id]);
+        return res.rows.length > 0 ? res.rows[0] : null;
+    }
+
     static async getByDni(dni) {
         const res = await pool.query('SELECT * FROM Personas WHERE dni = $1', [dni]);
         return res.rows.length > 0 ? res.rows[0] : null;
@@ -70,15 +98,78 @@ class Persona {
         }
     }
 
+    // Busca si la persona ya tiene una cuenta en una moneda dada (ej. USD)
+    static async getCuentaPorMoneda(idPersona, moneda) {
+        const res = await pool.query(
+            `SELECT cb.id_cuenta, cb.cbu, cb.alias, cb.moneda, cb.saldo
+             FROM Cuentas_Bancarias cb
+             JOIN Productos pr ON pr.id_producto = cb.id_producto
+             WHERE pr.id_persona = $1 AND cb.moneda = $2`,
+            [idPersona, moneda]
+        );
+        return res.rows.length > 0 ? res.rows[0] : null;
+    }
+
+    // Crea una caja de ahorro adicional en otra moneda (ej. USD) para una persona que ya
+    // tiene su cuenta en ARS. Mismo tipo de producto (CAJA_AHORRO), producto nuevo aparte.
+    static async crearCuentaMoneda(idPersona, cbu, alias, moneda, saldoInicial = 0) {
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            const resTipoProducto = await client.query(
+                "SELECT id_tipo_producto FROM Tipos_Producto WHERE nombre = 'CAJA_AHORRO'"
+            );
+            const resEstado = await client.query(
+                "SELECT id_estado_producto FROM Estados_Producto WHERE nombre = 'ACTIVO'"
+            );
+
+            const resProducto = await client.query(
+                'INSERT INTO Productos (id_persona, id_tipo_producto, id_estado_producto) VALUES ($1, $2, $3) RETURNING id_producto',
+                [idPersona, resTipoProducto.rows[0].id_tipo_producto, resEstado.rows[0].id_estado_producto]
+            );
+            const idProducto = resProducto.rows[0].id_producto;
+
+            const resCuenta = await client.query(
+                `INSERT INTO Cuentas_Bancarias (id_producto, cbu, alias, moneda, saldo)
+                 VALUES ($1, $2, $3, $4, $5)
+                 RETURNING id_cuenta, cbu, alias, moneda, saldo`,
+                [idProducto, cbu, alias || null, moneda, Number(saldoInicial) || 0]
+            );
+
+            await client.query('COMMIT');
+            return resCuenta.rows[0];
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
+
     static async updateAlias(cbu, nuevoAlias) {
         const query = `
-            UPDATE Cuentas_Bancarias 
-            SET alias = $1 
-            WHERE cbu = $2 
+            UPDATE Cuentas_Bancarias
+            SET alias = $1
+            WHERE cbu = $2
             RETURNING *;
         `;
         const res = await pool.query(query, [nuevoAlias, cbu]);
         return res.rows[0];
+    }
+
+    // Actualiza los datos de contacto de la persona (Ajustes de perfil). A propósito NO incluye
+    // nombre/apellido/dni: esos están registrados en el Banco Central junto con el CBU, y
+    // cambiarlos ahí requeriría sincronizar con la red — fuera de alcance de esta pantalla.
+    static async actualizarDatosContacto(id, { email, telefono, direccion }) {
+        const query = `
+            UPDATE Personas
+            SET email = $1, telefono = $2, direccion = $3
+            WHERE id = $4
+            RETURNING id, nombre, apellido, dni, email, telefono, direccion, fecha_nac;
+        `;
+        const res = await pool.query(query, [email, telefono, direccion, id]);
+        return res.rows.length > 0 ? res.rows[0] : null;
     }
 }
 

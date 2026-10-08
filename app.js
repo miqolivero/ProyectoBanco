@@ -8,8 +8,28 @@ const cors = require('cors');
 const app = express();
 
 // --- 2. CONFIGURACIÓN DE CORS ---
+// 🎯 Vite a veces levanta en otro puerto (5174, 5175...) si el 5173 ya está ocupado por
+// una instancia vieja de "npm run dev" que quedó corriendo de otra sesión — con el origin
+// fijo a 5173 esos casos rompían silenciosamente todos los fetch del front con "Failed to
+// fetch". Aceptamos cualquier puerto de localhost/127.0.0.1 (solo en dev, nunca se despliega
+// así en producción) en vez de perseguir manualmente cuál puerto quedó libre cada vez.
+const localhostRegex = /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/;
+// 🎯 Preparado para producción: además de cualquier localhost (dev), se permite el/los
+// dominio(s) del frontend ya desplegado vía FRONTEND_URL (uno o varios separados por coma,
+// ej. "https://mi-banco.vercel.app"). En local, si no se define, esto queda vacío y no
+// cambia nada del comportamiento actual.
+const origenesPermitidos = (process.env.FRONTEND_URL || '')
+    .split(',')
+    .map(url => url.trim())
+    .filter(Boolean);
 app.use(cors({
-    origin: 'http://localhost:5173', // El puerto de tu React
+    origin: (origin, callback) => {
+        if (!origin || localhostRegex.test(origin) || origenesPermitidos.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('No permitido por CORS'));
+        }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
 }));
@@ -17,7 +37,17 @@ app.use(cors({
 // --- 3. IMPORTACIÓN DE RUTAS Y CONTROLADORES ---
 const personaRoutes = require('./routes/personaRoutes');
 const movimientoRoutes = require('./routes/movimientoRoutes');
-const tablaController = require('./controllers/tablaController');
+const servicioRoutes = require('./routes/servicioRoutes');
+const reservaRoutes = require('./routes/reservaRoutes');
+const tarjetaRoutes = require('./routes/tarjetaRoutes');
+const plazoFijoRoutes = require('./routes/plazoFijoRoutes');
+const prestamoRoutes = require('./routes/prestamoRoutes');
+const seguroRoutes = require('./routes/seguroRoutes');
+const cedearRoutes = require('./routes/cedearRoutes');
+const asistenteRoutes = require('./routes/asistenteRoutes');
+const { centralBankFetch } = require('./config/centralBank');
+const { clerkAttach } = require('./middlewares/auth');
+const pool = require('./config/db');
 
 // --- 4. CONFIGURACIÓN GLOBAL ---
 global.diccionarioBancos = {};
@@ -27,15 +57,7 @@ const cargarListaBancos = async () => {
     try {
         console.log("📡 Intentando conectar con el Central...");
         
-        const response = await fetch('https://centralbank.brocoly.cc/api/banks', {
-            method: 'GET',
-            headers: { 
-                'x-environment': 'test', 
-                // 🎯 MODIFICADO: Ahora lee de forma segura desde las variables de entorno
-                'x-api-key': process.env.CENTRAL_BANK_API_KEY 
-            },
-            body: null 
-        });
+        const response = await centralBankFetch('/banks');
 
         console.log(`📡 Estado de la API de Bancos: ${response.status} ${response.statusText}`);
 
@@ -60,23 +82,44 @@ const cargarListaBancos = async () => {
 
 // --- 6. MIDDLEWARES REQUERIDOS ---
 app.use(express.json());
+// 🎯 Lee y valida (si viene) el JWT de Clerk en cada request y arma req.auth — no bloquea nada
+// por sí solo, es lo que después usa requireAuth (middlewares/auth.js) en cada ruta protegida.
+app.use(clerkAttach);
 
-// --- 7. RUTAS PRINCIPALES ---
-app.use('/api/personas', personaRoutes);
-app.use('/api/movimientos', movimientoRoutes);
-app.get('/api/tablas/:tabla', tablaController.obtenerTabla);
-
-app.get('/debug-bancos', (req, res) => {
-    res.json(global.diccionarioBancos);
+// --- 7. HEALTH CHECK ---
+// 🎯 Sirve para dos cosas en producción: que Render pueda chequear si el servicio está vivo, y
+// para poder diagnosticar de una si el backend desplegado realmente llega a la base (el error
+// más típico al pasar a Supabase es que conecte el servidor pero no la DB). No expone ningún
+// dato: solo dice si el SELECT de prueba respondió.
+app.get('/api/health', async (req, res) => {
+    try {
+        await pool.query('SELECT 1');
+        res.json({ ok: true, db: 'ok' });
+    } catch (error) {
+        console.error('❌ Health check: la base no responde:', error.message);
+        res.status(503).json({ ok: false, db: 'error', detalle: error.message });
+    }
 });
 
-// --- 8. MANEJO DE ERRORES BÁSICO ---
+// --- 8. RUTAS PRINCIPALES ---
+app.use('/api/personas', personaRoutes);
+app.use('/api/movimientos', movimientoRoutes);
+app.use('/api/servicios', servicioRoutes);
+app.use('/api/reservas', reservaRoutes);
+app.use('/api/tarjetas', tarjetaRoutes);
+app.use('/api/plazos-fijos', plazoFijoRoutes);
+app.use('/api/prestamos', prestamoRoutes);
+app.use('/api/seguros', seguroRoutes);
+app.use('/api/cedears', cedearRoutes);
+app.use('/api/asistente', asistenteRoutes);
+
+// --- 9. MANEJO DE ERRORES BÁSICO ---
 app.use((err, req, res, next) => {
     console.error("❌ Error no controlado:", err.stack);
     res.status(500).json({ error: 'Algo salió mal en el servidor' });
 });
 
-// --- 9. INICIO DEL SERVIDOR ---
+// --- 10. INICIO DEL SERVIDOR ---
 const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {
