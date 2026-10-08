@@ -4,6 +4,15 @@
   animation: fadeIn 0.3s ease-in-out;
 }
 
+.cedears-eyebrow {
+  display: block;
+  font-size: 12.5px;
+  font-style: italic;
+  color: #0f3424;
+  opacity: 0.6;
+  margin-bottom: 6px;
+}
+
 .cedears-header-box h2 {
   font-size: 24px;
   color: #111827;
@@ -11,8 +20,14 @@
 }
 
 .cedears-header-box p {
-  color: #6b7280;
-  font-size: 14px;
+  color: #1a5c3f;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  background: linear-gradient(90deg, #eefdf4, rgba(238, 253, 244, 0));
+  border-left: 3px solid #2e7d4f;
+  padding: 8px 14px;
+  border-radius: 0 8px 8px 0;
   margin: 0 0 28px 0;
 }
 
@@ -218,12 +233,14 @@
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
-  padding: 24px;
+  padding: 28px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
 }
 
 .cedears-info-panel h4 {
-  margin: 0 0 16px 0;
+  margin: 0 0 18px 0;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f3f4f6;
   font-size: 15px;
   color: #111827;
 }
@@ -234,11 +251,15 @@
   font-weight: 600;
   color: #6b7280;
   letter-spacing: 0.5px;
-  margin-top: 16px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #f3f4f6;
 }
 
 .cedears-info-panel .cedears-info-label:first-of-type {
   margin-top: 0;
+  padding-top: 0;
+  border-top: none;
 }
 
 .cedears-info-saldo {
@@ -272,4 +293,11 @@
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* 🎯 En celulares angostos, los 2 campos lado a lado quedaban muy apretados */
+@media (max-width: 480px) {
+  .cedears-row {
+    flex-direction: column;
+  }
 }

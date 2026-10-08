@@ -26,6 +26,15 @@
   box-sizing: border-box;
 }
 
+.transfer-eyebrow {
+  display: block;
+  font-size: 12.5px;
+  font-style: italic;
+  color: #0f3424;
+  opacity: 0.6;
+  margin-bottom: 6px;
+}
+
 .form-card-title {
   margin: 0 0 28px 0;
   font-size: 20px;
@@ -110,6 +119,7 @@
   background-color: #0f3424;
   color: white;
   border-color: #0f3424;
+  cursor: default;
 }
 
 .toggle-btn.cancel {
@@ -216,7 +226,7 @@
 .security-banner-card {
   background: linear-gradient(135deg, #0f3424 0%, #154732 100%);
   color: white;
-  padding: 26px;
+  padding: 30px;
   border-radius: 12px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
   box-sizing: border-box;
@@ -227,7 +237,9 @@
 }
 
 .security-banner-card h4 {
-  margin: 0 0 12px 0;
+  margin: 0 0 16px 0;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
   font-size: 15px;
   font-weight: 600;
 }
@@ -245,11 +257,15 @@
   font-weight: 600;
   opacity: 0.7;
   letter-spacing: 0.5px;
-  margin-top: 16px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .security-banner-card .transfer-info-label:first-of-type {
   margin-top: 0;
+  padding-top: 0;
+  border-top: none;
 }
 
 .transfer-info-saldo {

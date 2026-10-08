@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AlertTriangle, CheckCircle2, Trash2 } from 'lucide-react';
 import './Reservas.css';
+import { API_URL } from '../../config/api';
 
 export default function Reservas({ datosUsuario, alMovimientoExitoso, alCancelar }) {
   const [reservas, setReservas] = useState([]);
@@ -21,7 +22,7 @@ export default function Reservas({ datosUsuario, alMovimientoExitoso, alCancelar
 
   const cargarReservas = async () => {
     try {
-      const response = await fetch(`http://localhost:3001/api/reservas?cbu=${datosUsuario.cbu}`);
+      const response = await fetch(`${API_URL}/api/reservas?cbu=${datosUsuario.cbu}`);
       const data = await response.json();
       if (response.ok && Array.isArray(data)) setReservas(data);
     } catch {
@@ -32,7 +33,11 @@ export default function Reservas({ datosUsuario, alMovimientoExitoso, alCancelar
   };
 
   useEffect(() => {
-    cargarReservas();
+    let cancelado = false;
+    (async () => {
+      if (!cancelado) await cargarReservas();
+    })();
+    return () => { cancelado = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [datosUsuario?.cbu]);
 
@@ -47,7 +52,7 @@ export default function Reservas({ datosUsuario, alMovimientoExitoso, alCancelar
 
     try {
       setCreando(true);
-      const response = await fetch('http://localhost:3001/api/reservas', {
+      const response = await fetch(`${API_URL}/api/reservas`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -76,7 +81,7 @@ export default function Reservas({ datosUsuario, alMovimientoExitoso, alCancelar
     setMensaje({ tipo: '', texto: '' });
     try {
       setProcesandoId(idReserva);
-      const response = await fetch(`http://localhost:3001/api/reservas/${idReserva}`, {
+      const response = await fetch(`${API_URL}/api/reservas/${idReserva}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cbu: datosUsuario.cbu })
@@ -105,7 +110,7 @@ export default function Reservas({ datosUsuario, alMovimientoExitoso, alCancelar
     try {
       setProcesandoId(idReserva);
       const endpoint = tipo === 'aportar' ? 'aportar' : 'retirar';
-      const response = await fetch(`http://localhost:3001/api/reservas/${endpoint}`, {
+      const response = await fetch(`${API_URL}/api/reservas/${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id_reserva: idReserva, monto, cbu: datosUsuario.cbu })
@@ -128,6 +133,7 @@ export default function Reservas({ datosUsuario, alMovimientoExitoso, alCancelar
   return (
     <div className="reservas-container">
       <div className="reservas-header-box">
+        <span className="reservas-eyebrow">Guardá cada peso como el agua en un dique</span>
         <h2>Reservas y Ahorros</h2>
         <p>Separá plata de tu cuenta principal en "bolsillos" con objetivos, sin abrir otra cuenta.</p>
       </div>

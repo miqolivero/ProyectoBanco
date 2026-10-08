@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useUser, useClerk } from '@clerk/clerk-react';
 import { TriangleAlert } from 'lucide-react';
 import logo from "../../assets/LogoMinimalista.png";
 import fondoSierras from "../../assets/screen.png";
 import './FormularioOnboarding.css'; // Importamos sus estilos independientes
+import { API_URL } from '../../config/api';
 
 const FormularioOnboarding = ({ onRegistroExitoso }) => {
   const { user } = useUser();
@@ -29,10 +30,44 @@ const FormularioOnboarding = ({ onRegistroExitoso }) => {
     });
   };
 
+  // Mismo mínimo que valida el backend (personaController.js) — se repite acá solo para dar
+  // feedback inmediato sin ida y vuelta al servidor; la validación real y autoritativa es la del
+  // backend, esta es puramente de UX.
+  const EDAD_MINIMA = 18;
+  // Tope del datepicker: hoy - 18 años, para que ni siquiera se pueda elegir una fecha de un
+  // menor desde el calendario (además de la validación al enviar el formulario).
+  const fechaMaximaNacimiento = (() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - EDAD_MINIMA);
+    return d.toISOString().slice(0, 10);
+  })();
+  const calcularEdad = (fechaNacimiento) => {
+    const nacimiento = new Date(fechaNacimiento);
+    if (isNaN(nacimiento.getTime())) return null;
+    const hoy = new Date();
+    let edad = hoy.getFullYear() - nacimiento.getFullYear();
+    const noCumplioAunEsteAnio =
+      hoy.getMonth() < nacimiento.getMonth() ||
+      (hoy.getMonth() === nacimiento.getMonth() && hoy.getDate() < nacimiento.getDate());
+    if (noCumplioAunEsteAnio) edad--;
+    return edad;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setCargando(true);
     setErrorMsg('');
+
+    const edad = calcularEdad(formData.fecha_nacimiento);
+    if (edad === null) {
+      setErrorMsg('Ingresá una fecha de nacimiento válida.');
+      return;
+    }
+    if (edad < EDAD_MINIMA) {
+      setErrorMsg(`Debés ser mayor de ${EDAD_MINIMA} años para abrir una cuenta en Calamuchita Bank.`);
+      return;
+    }
+
+    setCargando(true);
 
     const datosParaEnviar = {
       ...formData,
@@ -41,7 +76,7 @@ const FormularioOnboarding = ({ onRegistroExitoso }) => {
     };
 
     try {
-      const response = await fetch('http://localhost:3001/api/personas', {
+      const response = await fetch(`${API_URL}/api/personas`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -140,7 +175,14 @@ const FormularioOnboarding = ({ onRegistroExitoso }) => {
             <div className="form-row">
               <div className="input-group">
                 <label>Fecha de Nacimiento</label>
-                <input type="date" name="fecha_nacimiento" required value={formData.fecha_nacimiento} onChange={handleChange} />
+                <input
+                  type="date"
+                  name="fecha_nacimiento"
+                  required
+                  max={fechaMaximaNacimiento}
+                  value={formData.fecha_nacimiento}
+                  onChange={handleChange}
+                />
               </div>
               <div className="input-group">
                 <label>Teléfono</label>

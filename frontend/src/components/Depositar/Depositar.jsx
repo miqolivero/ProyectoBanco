@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import SelectorCuenta from '../SelectorCuenta/SelectorCuenta';
 import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import './Depositar.css';
+import { API_URL } from '../../config/api';
 
 export default function Depositar({ datosUsuario, cuentas, monedaActiva, onCambiarMoneda, mostrarAbrirUSD, onAbrirUSD, abriendoUSD, alDepositarExitoso, alCancelar }) {
   const [monto, setMonto] = useState('');
@@ -33,7 +34,7 @@ export default function Depositar({ datosUsuario, cuentas, monedaActiva, onCambi
 
     try {
       setCargando(true);
-      const response = await fetch('http://localhost:3001/api/movimientos/depositar', {
+      const response = await fetch(`${API_URL}/api/movimientos/depositar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -66,6 +67,7 @@ export default function Depositar({ datosUsuario, cuentas, monedaActiva, onCambi
   return (
     <div className="depositar-container">
       <div className="depositar-header-box">
+        <span className="depositar-eyebrow">Como el agua de las sierras, cada peso encuentra su curso</span>
         <h2>Cargar Dinero en Cuenta</h2>
         <p>Simulá un depósito en efectivo por terminales autoservicio e impactalo al instante.</p>
       </div>
@@ -96,8 +98,8 @@ export default function Depositar({ datosUsuario, cuentas, monedaActiva, onCambi
 
           <div className="depositar-field">
             <label>Monto a Depositar ({cuentaSeleccionada?.moneda || 'ARS'})</label>
-            <div className="input-monto-wrapper">
-              <span className="currency-prefix">{cuentaSeleccionada?.moneda === 'USD' ? 'US$' : '$'}</span>
+            <div className="depositar-monto-wrapper">
+              <span className="depositar-currency-prefix">{cuentaSeleccionada?.moneda === 'USD' ? 'US$' : '$'}</span>
               <input
                 type="number"
                 placeholder="0.00"

@@ -15,12 +15,14 @@
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
-  padding: 24px;
+  padding: 28px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
 }
 
 .depositar-info-panel h4 {
-  margin: 0 0 16px 0;
+  margin: 0 0 18px 0;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f3f4f6;
   font-size: 15px;
   color: #111827;
 }
@@ -31,11 +33,15 @@
   font-weight: 600;
   color: #6b7280;
   letter-spacing: 0.5px;
-  margin-top: 12px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #f3f4f6;
 }
 
 .depositar-info-panel .depositar-info-label:first-of-type {
   margin-top: 0;
+  padding-top: 0;
+  border-top: none;
 }
 
 .depositar-info-saldo {
@@ -58,6 +64,15 @@
   }
 }
 
+.depositar-eyebrow {
+  display: block;
+  font-size: 12.5px;
+  font-style: italic;
+  color: #0f3424;
+  opacity: 0.6;
+  margin-bottom: 6px;
+}
+
 .depositar-header-box h2 {
   font-size: 24px;
   color: #111827;
@@ -65,8 +80,14 @@
 }
 
 .depositar-header-box p {
-  color: #6b7280;
-  font-size: 14px;
+  color: #1a5c3f;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  background: linear-gradient(90deg, #eefdf4, rgba(238, 253, 244, 0));
+  border-left: 3px solid #2e7d4f;
+  padding: 8px 14px;
+  border-radius: 0 8px 8px 0;
   margin: 0 0 28px 0;
 }
 
@@ -111,7 +132,7 @@
    superponía con el placeholder cuando el símbolo pasaba de "$" a "US$" en la cuenta en
    dólares) — ahora vive como un elemento normal dentro del wrapper, que reserva su propio
    ancho según el texto que tenga, sin importar cuántos caracteres sea. */
-.input-monto-wrapper {
+.depositar-monto-wrapper {
   display: flex;
   align-items: center;
   border: 1px solid #d1d5db;
@@ -119,12 +140,12 @@
   transition: border-color 0.2s;
 }
 
-.input-monto-wrapper:focus-within {
+.depositar-monto-wrapper:focus-within {
   border-color: #0f3424;
   box-shadow: 0 0 0 3px rgba(15, 52, 36, 0.1);
 }
 
-.currency-prefix {
+.depositar-currency-prefix {
   padding-left: 14px;
   font-size: 20px;
   font-weight: 600;

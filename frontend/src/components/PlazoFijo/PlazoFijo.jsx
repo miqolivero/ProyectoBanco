@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import './PlazoFijo.css';
+import { API_URL } from '../../config/api';
 
 export default function PlazoFijo({ datosUsuario, alConstituirExitoso, alLiquidarExitoso, alCancelar }) {
   const [tasa, setTasa] = useState(null);
@@ -22,7 +23,7 @@ export default function PlazoFijo({ datosUsuario, alConstituirExitoso, alLiquida
 
   const cargarTasa = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/plazos-fijos/tasa');
+      const response = await fetch(`${API_URL}/api/plazos-fijos/tasa`);
       const data = await response.json();
       if (response.ok) setTasa(data);
     } catch {
@@ -34,7 +35,7 @@ export default function PlazoFijo({ datosUsuario, alConstituirExitoso, alLiquida
 
   const cargarLista = async () => {
     try {
-      const response = await fetch(`http://localhost:3001/api/plazos-fijos?cbu=${datosUsuario.cbu}`);
+      const response = await fetch(`${API_URL}/api/plazos-fijos?cbu=${datosUsuario.cbu}`);
       const data = await response.json();
       if (response.ok && Array.isArray(data)) setPlazosFijos(data);
     } catch {
@@ -45,8 +46,12 @@ export default function PlazoFijo({ datosUsuario, alConstituirExitoso, alLiquida
   };
 
   useEffect(() => {
-    cargarTasa();
-    cargarLista();
+    let cancelado = false;
+    (async () => {
+      if (cancelado) return;
+      await Promise.all([cargarTasa(), cargarLista()]);
+    })();
+    return () => { cancelado = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [datosUsuario?.cbu]);
 
@@ -72,7 +77,7 @@ export default function PlazoFijo({ datosUsuario, alConstituirExitoso, alLiquida
 
     try {
       setConstituyendo(true);
-      const response = await fetch('http://localhost:3001/api/plazos-fijos', {
+      const response = await fetch(`${API_URL}/api/plazos-fijos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cbu: datosUsuario.cbu, capital: capitalNum, plazo_dias: Number(plazoDias) })
@@ -95,7 +100,7 @@ export default function PlazoFijo({ datosUsuario, alConstituirExitoso, alLiquida
     setMensaje({ tipo: '', texto: '' });
     try {
       setLiquidandoId(idPlazoFijo);
-      const response = await fetch('http://localhost:3001/api/plazos-fijos/liquidar', {
+      const response = await fetch(`${API_URL}/api/plazos-fijos/liquidar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id_plazo_fijo: idPlazoFijo, cbu: datosUsuario.cbu })
@@ -116,6 +121,7 @@ export default function PlazoFijo({ datosUsuario, alConstituirExitoso, alLiquida
   return (
     <div className="pf-container">
       <div className="pf-header-box">
+        <span className="pf-eyebrow">Dejá crecer tu dinero con la paciencia de las sierras</span>
         <h2>Plazo Fijo</h2>
         <p>Constituí un plazo fijo tradicional y ganá intereses sobre tu dinero.</p>
       </div>
@@ -163,7 +169,7 @@ export default function PlazoFijo({ datosUsuario, alConstituirExitoso, alLiquida
                 disabled={constituyendo}
                 className="pf-input-select"
               >
-                {(tasa?.plazosPermitidos || [30, 60, 90, 180, 365]).map(d => (
+                {(tasa?.plazosPermitidos || [30, 60, 90, 180]).map(d => (
                   <option key={d} value={d}>{d} días</option>
                 ))}
               </select>

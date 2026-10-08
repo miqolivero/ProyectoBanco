@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useClerk } from '@clerk/clerk-react';
+import * as XLSX from 'xlsx';
 import {
-  Home, ArrowLeftRight, Wallet, Smartphone, Receipt, PiggyBank, CreditCard,
-  TrendingUp, Landmark, Shield, BarChart3, History, Settings, User, LogOut,
-  Eye, EyeOff, Pencil, Check, X, DollarSign, Send, Download, Briefcase, Plus
+  Home, ArrowLeftRight, Receipt, CreditCard,
+  TrendingUp, TrendingDown, Landmark, BarChart3, History, Settings, User, LogOut,
+  Eye, EyeOff, Pencil, Check, X, DollarSign, Send, Download, Briefcase, Plus,
+  ChevronDown, ChevronRight, Layers, CalendarRange, Hash, Bot
 } from 'lucide-react';
 import logo from "../../assets/LogoMinimalista.png";
 import Transferencias from '../Transferencia/Transferencias';
@@ -16,8 +18,27 @@ import PlazoFijo from '../PlazoFijo/PlazoFijo';
 import Prestamos from '../Prestamos/Prestamos';
 import Seguros from '../Seguros/Seguros';
 import Cedears from '../Cedears/Cedears';
+import CambioDivisa from '../CambioDivisa/CambioDivisa';
+import Ajustes from '../Ajustes/Ajustes';
 import SelectorCuenta from '../SelectorCuenta/SelectorCuenta';
+import ComprobanteMovimiento from '../ComprobanteMovimiento/ComprobanteMovimiento';
+import Asistente from '../Asistente/Asistente';
 import './InicioBanco.css';
+import { API_URL } from '../../config/api';
+
+// 🎯 Sidebar agrupada en subcategorías: en vez de 14 items sueltos, los que comparten
+// "familia" quedan dentro de un grupo colapsable. Historial queda suelto a propósito (no es
+// "un movimiento", es la vista de todos ellos) y lo mismo Ajustes.
+const GRUPOS_MENU = {
+  movimientos: ['transferencias', 'depositar'],
+  pagos: ['servicios', 'recargas', 'seguros'],
+  inversiones: ['plazo-fijo', 'cedears', 'cambio', 'reservas'],
+  credito: ['tarjeta', 'prestamos'],
+};
+
+function grupoDeVista(vista) {
+  return Object.keys(GRUPOS_MENU).find(g => GRUPOS_MENU[g].includes(vista)) || null;
+}
 
 export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
   const { signOut } = useClerk();
@@ -40,10 +61,20 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
   const [errorAlias, setErrorAlias] = useState('');
   const [guardandoAlias, setGuardandoAlias] = useState(false);
 
+  // Comprobante virtual: se abre al hacer click en cualquier movimiento (tanto en "Movimientos
+  // recientes" de Inicio como en la tabla completa de Historial).
+  const [movimientoSeleccionado, setMovimientoSeleccionado] = useState(null);
+
   const [mostrarSaldo, setMostrarSaldo] = useState(true);
   const [mostrarEstadisticas, setMostrarEstadisticas] = useState(false);
   const [menuPerfilAbierto, setMenuPerfilAbierto] = useState(false);
   const menuPerfilRef = useRef(null);
+
+  // Grupos colapsables de la sidebar — arrancan cerrados, y se abren solos si el usuario
+  // llega a una vista de ese grupo desde otro lado (ej. una tarjeta del dashboard).
+  // Un solo grupo abierto a la vez (acordeón): abrir uno cierra el que estuviera abierto antes.
+  const [grupoAbierto, setGrupoAbierto] = useState(null);
+  const toggleGrupoMenu = (grupo) => setGrupoAbierto(prev => (prev === grupo ? null : grupo));
 
   // 🎯 CUENTA EN USD: vive acá (no en una pantalla aparte) para que Depositar y Transferencias
   // puedan operar sobre ella con el mismo formulario que usan para la cuenta en ARS, en vez de
@@ -60,7 +91,7 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
     let cancelado = false;
     (async () => {
       try {
-        const res = await fetch(`http://localhost:3001/api/personas/${datosUsuario.id}/cuenta-usd`);
+        const res = await fetch(`${API_URL}/api/personas/${datosUsuario.id}/cuenta-usd`);
         const data = await res.json();
         if (!cancelado && res.ok && data) {
           setCuentaUSD(data);
@@ -76,7 +107,7 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
   const handleAbrirCuentaUSD = async () => {
     try {
       setAbriendoCuentaUSD(true);
-      const res = await fetch(`http://localhost:3001/api/personas/${datosUsuario.id}/cuenta-usd`, { method: 'POST' });
+      const res = await fetch(`${API_URL}/api/personas/${datosUsuario.id}/cuenta-usd`, { method: 'POST' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'No se pudo abrir la cuenta en USD.');
       setCuentaUSD(data);
@@ -125,6 +156,17 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
     return () => document.removeEventListener("mousedown", clickAfuera);
   }, []);
 
+  // Si se llega a una vista agrupada desde otro lado (una tarjeta del dashboard, "Ver todos"
+  // del historial, etc.) el grupo correspondiente se abre solo, para que el ítem activo de la
+  // sidebar no quede escondido dentro de un grupo colapsado. Mismo patrón de "ajustar estado
+  // durante el render" que saldoEspejo/inputAlias más abajo, en vez de un useEffect.
+  const [ultimaVistaParaGrupo, setUltimaVistaParaGrupo] = useState(vistaActual);
+  if (vistaActual !== ultimaVistaParaGrupo) {
+    setUltimaVistaParaGrupo(vistaActual);
+    const grupo = grupoDeVista(vistaActual);
+    if (grupo) setGrupoAbierto(grupo);
+  }
+
   const formatearMoneda = (valor, moneda = 'ARS') => {
     if (!mostrarSaldo) return moneda === 'USD' ? "US$ *******" : "$ *******";
     return new Intl.NumberFormat(moneda === 'USD' ? 'en-US' : 'es-AR', { style: 'currency', currency: moneda }).format(valor || 0);
@@ -158,7 +200,7 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
     // El backend (Movimiento.obtenerTodos) ya filtra por CBU y ordena por fecha descendente,
     // así que acá solo pedimos y guardamos: no hace falta repetir ese trabajo en el cliente.
     const cargarHistorial = async () => {
-      const response = await fetch(`http://localhost:3001/api/movimientos/historial?cbu=${miCbuLimpio}`);
+      const response = await fetch(`${API_URL}/api/movimientos/historial?cbu=${miCbuLimpio}`);
       const data = await response.json();
       if (!cancelado && response.ok && Array.isArray(data)) {
         setMovimientos(data);
@@ -170,7 +212,7 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
     // cada click del sidebar, para no recargar de pedidos una API que usan los demás grupos.
     const sincronizarConCentral = async () => {
       try {
-        const resSync = await fetch(`http://localhost:3001/api/movimientos/sincronizar?minutos=30&cbu=${miCbuLimpio}`);
+        const resSync = await fetch(`${API_URL}/api/movimientos/sincronizar?minutos=30&cbu=${miCbuLimpio}`);
         if (!cancelado && resSync.ok) {
           if (actualizarDatosBase) actualizarDatosBase();
           await cargarHistorial();
@@ -202,7 +244,7 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
       cancelado = true;
       clearInterval(intervalo);
     };
-  }, [datosUsuario?.cbu, triggerRecarga]);
+  }, [datosUsuario?.cbu, triggerRecarga, actualizarDatosBase]);
 
   // Historial de la cuenta en USD, aparte del de ARS de arriba (misma API, otro CBU). La
   // sincronización con el Central de arriba ya no filtra por cbu (trae todo el pool de
@@ -215,7 +257,7 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
     const cargarHistorialUSD = async () => {
       try {
         setCargandoMovsUSD(true);
-        const response = await fetch(`http://localhost:3001/api/movimientos/historial?cbu=${cuentaUSD.cbu}`);
+        const response = await fetch(`${API_URL}/api/movimientos/historial?cbu=${cuentaUSD.cbu}`);
         const data = await response.json();
         if (!cancelado && response.ok && Array.isArray(data)) {
           setMovimientosUSD(data);
@@ -245,7 +287,7 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
 
     try {
       setErrorAlias(''); setGuardandoAlias(true);
-      const response = await fetch(`http://localhost:3001/api/personas/${cuentaVista.cbu}/alias`, {
+      const response = await fetch(`${API_URL}/api/personas/${cuentaVista.cbu}/alias`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nuevoAlias: aliasLimpio })
@@ -337,6 +379,17 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
     setTriggerRecarga(prev => prev + 1);
   };
 
+  // Cambio de divisa toca las DOS cuentas a la vez: resta de la de origen, suma en la de destino.
+  const handleCambioDivisaExitoso = (montoOrigen, monedaOrigen, montoDestino, monedaDestino) => {
+    if (monedaOrigen === 'USD') setSaldoEspejoUSD(prev => prev - montoOrigen);
+    else setSaldoEspejo(prev => prev - montoOrigen);
+
+    if (monedaDestino === 'USD') setSaldoEspejoUSD(prev => prev + montoDestino);
+    else setSaldoEspejo(prev => prev + montoDestino);
+
+    setTriggerRecarga(prev => prev + 1);
+  };
+
   const handleVolverAlInicio = () => {
     if (actualizarDatosBase) { actualizarDatosBase(); }
     setTriggerRecarga(prev => prev + 1);
@@ -394,25 +447,71 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
     acc[categoria] = (acc[categoria] || 0) + valor;
     return acc;
   }, {});
+  const totalCategorizado = Object.values(resumenPorCategoria).reduce((a, b) => a + b, 0);
+  const categoriasOrdenadas = Object.entries(resumenPorCategoria).sort((a, b) => b[1] - a[1]);
+  const maxCategoria = categoriasOrdenadas.length > 0 ? categoriasOrdenadas[0][1] : 0;
 
-  const exportarCSV = () => {
-    const encabezado = ['Fecha', 'Categoria', 'Detalle', 'Monto'];
-    const filas = movimientosFiltrados.map(m => {
-      const fecha = formatearFecha(m.fecha_movimiento || m.fecha);
-      const categoria = m.tipo_movimiento || 'OTRO';
-      const detalle = (m.descripcion || '').replace(/"/g, '""');
-      const monto = Number(m.monto || m.importe || 0);
-      return [fecha, categoria, `"${detalle}"`, monto].join(',');
-    });
-    const csv = [encabezado.join(','), ...filas].join('\n');
+  // 🎯 EVOLUCIÓN MENSUAL: agrupa ingresos/egresos por mes calendario (orden cronológico real,
+  // no alfabético — se ordena por la clave "YYYY-MM" antes de formatear la etiqueta visible).
+  const resumenMensual = (() => {
+    const porMes = movimientosFiltrados.reduce((acc, m) => {
+      const fecha = new Date(m.fecha_movimiento || m.fecha);
+      if (isNaN(fecha.getTime())) return acc;
+      const clave = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+      if (!acc[clave]) acc[clave] = { ingresos: 0, egresos: 0, fecha };
+      const valor = Number(m.monto || m.importe || 0);
+      if (valor > 0) acc[clave].ingresos += valor; else acc[clave].egresos += Math.abs(valor);
+      return acc;
+    }, {});
+    return Object.entries(porMes)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([clave, datos]) => ({
+        clave,
+        etiqueta: new Intl.DateTimeFormat('es-AR', { month: 'short', year: '2-digit' }).format(datos.fecha),
+        ingresos: datos.ingresos,
+        egresos: datos.egresos,
+      }));
+  })();
+  const maxMensual = Math.max(1, ...resumenMensual.flatMap(m => [m.ingresos, m.egresos]));
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `movimientos_${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+  const cantidadMovimientos = movimientosFiltrados.length;
+  const promedioMovimiento = cantidadMovimientos > 0
+    ? (reporte.ingresos + reporte.egresos) / cantidadMovimientos
+    : 0;
+
+  // 🎯 Exportación real a Excel (.xlsx, 3 hojas) en vez del CSV plano anterior — mismos datos,
+  // pero legibles directamente en Excel: encabezados con ancho fijo, montos numéricos (no texto)
+  // y separados en pestañas por tipo de reporte en vez de todo apilado en una sola tabla.
+  const exportarExcel = () => {
+    const libro = XLSX.utils.book_new();
+
+    const hojaMovimientos = XLSX.utils.json_to_sheet(movimientosFiltrados.map(m => ({
+      Fecha: formatearFecha(m.fecha_movimiento || m.fecha),
+      Categoría: (m.tipo_movimiento || 'OTRO').replace(/_/g, ' '),
+      Detalle: m.descripcion || '',
+      Monto: Number(m.monto || m.importe || 0),
+    })));
+    hojaMovimientos['!cols'] = [{ wch: 14 }, { wch: 22 }, { wch: 40 }, { wch: 14 }];
+    XLSX.utils.book_append_sheet(libro, hojaMovimientos, 'Movimientos');
+
+    const hojaCategorias = XLSX.utils.json_to_sheet(categoriasOrdenadas.map(([categoria, monto]) => ({
+      Categoría: categoria.replace(/_/g, ' '),
+      Monto: monto,
+      '% del total': totalCategorizado > 0 ? Number(((monto / totalCategorizado) * 100).toFixed(1)) : 0,
+    })));
+    hojaCategorias['!cols'] = [{ wch: 22 }, { wch: 14 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(libro, hojaCategorias, 'Por categoría');
+
+    const hojaMensual = XLSX.utils.json_to_sheet(resumenMensual.map(m => ({
+      Mes: m.etiqueta,
+      Ingresos: m.ingresos,
+      Egresos: m.egresos,
+      Balance: m.ingresos - m.egresos,
+    })));
+    hojaMensual['!cols'] = [{ wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 14 }];
+    XLSX.utils.book_append_sheet(libro, hojaMensual, 'Resumen mensual');
+
+    XLSX.writeFile(libro, `estadisticas_calamuchita_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
 
@@ -429,55 +528,136 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
         </div>
 
         <nav className="sidebar-menu">
-          <button className={`menu-item ${vistaActual === 'inicio' ? 'active' : ''}`} onClick={() => setVistaActual('inicio')}>
+          <button className={`menu-item menu-item-inicio ${vistaActual === 'inicio' ? 'active' : ''}`} onClick={() => setVistaActual('inicio')}>
             <Home size={18} /> Inicio
           </button>
-          <button className={`menu-item ${vistaActual === 'transferencias' ? 'active' : ''}`} onClick={() => setVistaActual('transferencias')}>
-            <ArrowLeftRight size={18} /> Transferencias
-          </button>
-          <button className={`menu-item ${vistaActual === 'depositar' ? 'active' : ''}`} onClick={() => setVistaActual('depositar')}>
-            <Wallet size={18} /> Depósitos
-          </button>
-          <button className={`menu-item ${vistaActual === 'recargas' ? 'active' : ''}`} onClick={() => setVistaActual('recargas')}>
-            <Smartphone size={18} /> Recargas
-          </button>
-          <button className={`menu-item ${vistaActual === 'servicios' ? 'active' : ''}`} onClick={() => setVistaActual('servicios')}>
-            <Receipt size={18} /> Pago de Servicios
-          </button>
-          <button className={`menu-item ${vistaActual === 'reservas' ? 'active' : ''}`} onClick={() => setVistaActual('reservas')}>
-            <PiggyBank size={18} /> Reservas y Ahorros
-          </button>
-          <button className={`menu-item ${vistaActual === 'tarjeta' ? 'active' : ''}`} onClick={() => setVistaActual('tarjeta')}>
-            <CreditCard size={18} /> Tarjeta de Crédito
-          </button>
-          <button className={`menu-item ${vistaActual === 'plazo-fijo' ? 'active' : ''}`} onClick={() => setVistaActual('plazo-fijo')}>
-            <TrendingUp size={18} /> Plazo Fijo
-          </button>
-          <button className={`menu-item ${vistaActual === 'prestamos' ? 'active' : ''}`} onClick={() => setVistaActual('prestamos')}>
-            <Landmark size={18} /> Préstamos
-          </button>
-          <button className={`menu-item ${vistaActual === 'seguros' ? 'active' : ''}`} onClick={() => setVistaActual('seguros')}>
-            <Shield size={18} /> Seguros
-          </button>
-          <button className={`menu-item ${vistaActual === 'cedears' ? 'active' : ''}`} onClick={() => setVistaActual('cedears')}>
-            <BarChart3 size={18} /> CEDEARs
-          </button>
+
+          <div className="menu-group">
+            <button
+              className={`menu-group-header ${grupoDeVista(vistaActual) === 'movimientos' ? 'active' : ''}`}
+              onClick={() => toggleGrupoMenu('movimientos')}
+              aria-expanded={(grupoAbierto === 'movimientos')}
+            >
+              <span className="menu-group-label"><ArrowLeftRight size={18} /> Movimientos</span>
+              {(grupoAbierto === 'movimientos') ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+            </button>
+            <div className={`menu-group-items ${(grupoAbierto === 'movimientos') ? 'abierto' : ''}`}>
+              <button className={`menu-item sub ${vistaActual === 'transferencias' ? 'active' : ''}`} onClick={() => setVistaActual('transferencias')}>
+                Transferencias
+              </button>
+              <button className={`menu-item sub ${vistaActual === 'depositar' ? 'active' : ''}`} onClick={() => setVistaActual('depositar')}>
+                Depósitos
+              </button>
+            </div>
+          </div>
+
           <button className={`menu-item ${vistaActual === 'historial' ? 'active' : ''}`} onClick={() => setVistaActual('historial')}>
             <History size={18} /> Historial
           </button>
-          <button className="menu-item disabled"><Settings size={18} /> Ajustes</button>
+
+          <div className="menu-group">
+            <button
+              className={`menu-group-header ${grupoDeVista(vistaActual) === 'pagos' ? 'active' : ''}`}
+              onClick={() => toggleGrupoMenu('pagos')}
+              aria-expanded={(grupoAbierto === 'pagos')}
+            >
+              <span className="menu-group-label"><Receipt size={18} /> Pagos</span>
+              {(grupoAbierto === 'pagos') ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+            </button>
+            <div className={`menu-group-items ${(grupoAbierto === 'pagos') ? 'abierto' : ''}`}>
+              <button className={`menu-item sub ${vistaActual === 'servicios' ? 'active' : ''}`} onClick={() => setVistaActual('servicios')}>
+                Pago de Servicios
+              </button>
+              <button className={`menu-item sub ${vistaActual === 'recargas' ? 'active' : ''}`} onClick={() => setVistaActual('recargas')}>
+                Recargas
+              </button>
+              <button className={`menu-item sub ${vistaActual === 'seguros' ? 'active' : ''}`} onClick={() => setVistaActual('seguros')}>
+                Seguros
+              </button>
+            </div>
+          </div>
+
+          <div className="menu-group">
+            <button
+              className={`menu-group-header ${grupoDeVista(vistaActual) === 'inversiones' ? 'active' : ''}`}
+              onClick={() => toggleGrupoMenu('inversiones')}
+              aria-expanded={(grupoAbierto === 'inversiones')}
+            >
+              <span className="menu-group-label"><TrendingUp size={18} /> Inversiones</span>
+              {(grupoAbierto === 'inversiones') ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+            </button>
+            <div className={`menu-group-items ${(grupoAbierto === 'inversiones') ? 'abierto' : ''}`}>
+              <button className={`menu-item sub ${vistaActual === 'plazo-fijo' ? 'active' : ''}`} onClick={() => setVistaActual('plazo-fijo')}>
+                Plazo Fijo
+              </button>
+              <button className={`menu-item sub ${vistaActual === 'cedears' ? 'active' : ''}`} onClick={() => setVistaActual('cedears')}>
+                CEDEARs
+              </button>
+              <button className={`menu-item sub ${vistaActual === 'cambio' ? 'active' : ''}`} onClick={() => setVistaActual('cambio')}>
+                Cambio de Divisa
+              </button>
+              <button className={`menu-item sub ${vistaActual === 'reservas' ? 'active' : ''}`} onClick={() => setVistaActual('reservas')}>
+                Reservas y Ahorros
+              </button>
+            </div>
+          </div>
+
+          <div className="menu-group">
+            <button
+              className={`menu-group-header ${grupoDeVista(vistaActual) === 'credito' ? 'active' : ''}`}
+              onClick={() => toggleGrupoMenu('credito')}
+              aria-expanded={(grupoAbierto === 'credito')}
+            >
+              <span className="menu-group-label"><CreditCard size={18} /> Crédito</span>
+              {(grupoAbierto === 'credito') ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+            </button>
+            <div className={`menu-group-items ${(grupoAbierto === 'credito') ? 'abierto' : ''}`}>
+              <button className={`menu-item sub ${vistaActual === 'tarjeta' ? 'active' : ''}`} onClick={() => setVistaActual('tarjeta')}>
+                Tarjeta de Crédito
+              </button>
+              <button className={`menu-item sub ${vistaActual === 'prestamos' ? 'active' : ''}`} onClick={() => setVistaActual('prestamos')}>
+                Préstamos
+              </button>
+            </div>
+          </div>
+
+          <button className={`menu-item ${vistaActual === 'asistente' ? 'active' : ''}`} onClick={() => setVistaActual('asistente')}>
+            <Bot size={18} /> Calamuchita IA
+          </button>
+
+          <button className={`menu-item ${vistaActual === 'ajustes' ? 'active' : ''}`} onClick={() => setVistaActual('ajustes')}>
+            <Settings size={18} /> Ajustes
+          </button>
         </nav>
 
         <div className="profile-popup-wrapper" ref={menuPerfilRef}>
           {menuPerfilAbierto && (
             <div className="profile-popup">
-              <h4><User size={16} /> Datos de Perfil</h4>
+              <div className="profile-popup-banner">
+                <span className="profile-popup-marca-agua" aria-hidden="true">C</span>
+                <div className="profile-popup-avatar">{datosUsuario?.nombre?.charAt(0).toUpperCase()}</div>
+                <div>
+                  <strong className="profile-popup-nombre">{datosUsuario?.nombre} {datosUsuario?.apellido}</strong>
+                  <span className="profile-popup-subtitulo"><User size={11} /> Datos de Perfil</span>
+                </div>
+              </div>
               <div className="profile-popup-fields">
-                <p><strong>Nombre:</strong> <span className="profile-popup-nombre">{datosUsuario?.nombre} {datosUsuario?.apellido}</span></p>
-                <p><strong>DNI:</strong> {datosUsuario?.dni || '---'}</p>
-                <p><strong>Email:</strong> {datosUsuario?.email || '---'}</p>
-                <p><strong>Teléfono:</strong> {datosUsuario?.telefono || '---'}</p>
-                <p><strong>Dirección:</strong> {datosUsuario?.direccion || '---'}</p>
+                <div className="profile-popup-row">
+                  <span className="profile-popup-label">DNI</span>
+                  <span className="profile-popup-valor">{datosUsuario?.dni || '---'}</span>
+                </div>
+                <div className="profile-popup-row">
+                  <span className="profile-popup-label">Email</span>
+                  <span className="profile-popup-valor">{datosUsuario?.email || '---'}</span>
+                </div>
+                <div className="profile-popup-row">
+                  <span className="profile-popup-label">Teléfono</span>
+                  <span className="profile-popup-valor">{datosUsuario?.telefono || '---'}</span>
+                </div>
+                <div className="profile-popup-row">
+                  <span className="profile-popup-label">Dirección</span>
+                  <span className="profile-popup-valor">{datosUsuario?.direccion || '---'}</span>
+                </div>
               </div>
               <button onClick={() => signOut()} className="btn-cerrar-sesion">
                 <LogOut size={14} /> Cerrar Sesión
@@ -498,34 +678,17 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
       {/* 💻 CONTENIDO DINÁMICO */}
       <main className="main-content">
         
-        <header className="main-header" style={{ marginBottom: '32px' }}>
-          <div className="main-header-left">
-            {vistaActual === 'inicio' && (
-              <div className="welcome-section" style={{ margin: 0 }}>
-                <h1 style={{ fontSize: '24px', margin: 0 }}>¡Hola de nuevo, {datosUsuario?.nombre}!</h1>
-                <p style={{ margin: '4px 0 0 0', fontSize: '14px' }}>Gestiona tu serenidad financiera hoy.</p>
-              </div>
-            )}
-            {vistaActual === 'transferencias' && <h2>Módulo de Transferencias</h2>}
-            {vistaActual === 'depositar' && <h2>Módulo de Depósitos</h2>}
-            {vistaActual === 'recargas' && <h2>Recarga de Celular</h2>}
-            {vistaActual === 'servicios' && <h2>Pago de Servicios</h2>}
-            {vistaActual === 'reservas' && <h2>Reservas y Ahorros</h2>}
-            {vistaActual === 'tarjeta' && <h2>Tarjeta de Crédito</h2>}
-            {vistaActual === 'plazo-fijo' && <h2>Plazo Fijo</h2>}
-            {vistaActual === 'prestamos' && <h2>Préstamos</h2>}
-            {vistaActual === 'seguros' && <h2>Seguros</h2>}
-            {vistaActual === 'cedears' && <h2>Inversiones en CEDEARs</h2>}
-            {vistaActual === 'historial' && <h2>Historial General</h2>}
-          </div>
-          
-          <div className="header-actions">
-            <div className="header-balance-indicator">
-              <span>SALDO {cuentaVista?.moneda === 'USD' ? '(USD)' : 'TOTAL'}</span>
-              <strong>{formatearMoneda(cuentaVista?.saldo, cuentaVista?.moneda)}</strong>
+        {/* 🎯 El header fijo con el "saldo total" en una pill quedaba muy vacío en pantallas que
+            no son Inicio (ese dato ya se repite en el balance-card / cards-panel de cada
+            pantalla). Ahora el header completo es exclusivo de Inicio: solo el saludo. */}
+        {vistaActual === 'inicio' && (
+          <header className="main-header">
+            <div className="welcome-section">
+              <h1>¡Hola de nuevo, {datosUsuario?.nombre}!</h1>
+              <p>Gestiona tu serenidad financiera hoy.</p>
             </div>
-          </div>
-        </header>
+          </header>
+        )}
 
         {/* 1. VISTA INICIO (DISEÑO INTACTO, SOLO CORREGIDA LA VARIABLE DE TEXTO) */}
         {vistaActual === 'inicio' && (
@@ -534,20 +697,12 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
               <div className="grid-left">
                 
                 <div className="balance-card">
+                  <span className="balance-marca-agua" aria-hidden="true">C</span>
                   <div className="balance-header">
                     <span>SALDO {cuentaVista?.moneda === 'USD' ? 'EN USD' : 'TOTAL DISPONIBLE'}</span>
                     <button
+                      className="balance-toggle-btn"
                       onClick={() => setMostrarSaldo(!mostrarSaldo)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: '0',
-                        color: 'white',
-                        opacity: '0.8',
-                        transition: 'opacity 0.2s',
-                        display: 'flex'
-                      }}
                       title={mostrarSaldo ? "Ocultar saldo" : "Mostrar saldo"}
                     >
                       {mostrarSaldo ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -555,38 +710,39 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
                   </div>
                   <h2 className="balance-amount">{formatearMoneda(cuentaVista?.saldo, cuentaVista?.moneda)}</h2>
                   <div className="balance-details">
-                    <p><strong>CBU:</strong> <span className="mono-text">{cuentaVista?.cbu}</span></p>
-
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', flexDirection: 'column', marginTop: '4px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
-                        <strong>Alias:</strong>
-                        {editandoAlias ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <input
-                              type="text"
-                              value={inputAlias}
-                              onChange={(e) => setInputAlias(e.target.value)}
-                              disabled={guardandoAlias}
-                              style={{ color: '#333', padding: '3px 8px', borderRadius: '4px', border: 'none', fontSize: '13px', outline: 'none', width: '180px' }}
-                            />
-                            <button onClick={handleGuardarAlias} disabled={guardandoAlias} style={{ display: 'flex', background: '#2e7d32', color: '#fff', border: 'none', padding: '3px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>
-                              {guardandoAlias ? '...' : <Check size={14} />}
-                            </button>
-                            <button onClick={() => { setEditandoAlias(false); setErrorAlias(''); setInputAlias(cuentaVista?.alias || ''); }} disabled={guardandoAlias} style={{ display: 'flex', background: '#d32f2f', color: '#fff', border: 'none', padding: '3px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>
-                              <X size={14} />
-                            </button>
-                          </div>
-                        ) : (
-                          <>
-                            <span className="mono-text" style={{ fontSize: '14px' }}>{cuentaVista?.alias || 'sin.alias.registrado'}</span>
-                            <button onClick={() => { setInputAlias(cuentaVista?.alias || ''); setEditandoAlias(true); }} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255, 255, 255, 0.2)', border: 'none', color: '#fff', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}>
-                              <Pencil size={11} /> Editar
-                            </button>
-                          </>
-                        )}
-                      </div>
-                      {errorAlias && <span style={{ color: '#ffcdd2', fontSize: '11px', backgroundColor: 'rgba(211, 47, 47, 0.4)', padding: '2px 8px', borderRadius: '4px', marginTop: '2px' }}>{errorAlias}</span>}
+                    <div className="balance-detail-row">
+                      <span className="balance-detail-label">CBU</span>
+                      <span className="mono-text balance-detail-valor">{cuentaVista?.cbu}</span>
                     </div>
+
+                    <div className="balance-detail-row">
+                      <span className="balance-detail-label">Alias</span>
+                      {editandoAlias ? (
+                        <div className="balance-alias-edit-group">
+                          <input
+                            type="text"
+                            value={inputAlias}
+                            onChange={(e) => setInputAlias(e.target.value)}
+                            disabled={guardandoAlias}
+                            className="balance-alias-input"
+                          />
+                          <button onClick={handleGuardarAlias} disabled={guardandoAlias} className="btn-alias-save" title="Guardar">
+                            {guardandoAlias ? '...' : <Check size={14} />}
+                          </button>
+                          <button onClick={() => { setEditandoAlias(false); setErrorAlias(''); setInputAlias(cuentaVista?.alias || ''); }} disabled={guardandoAlias} className="btn-alias-cancel" title="Cancelar">
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="balance-alias-view">
+                          <span className="mono-text balance-detail-valor">{cuentaVista?.alias || 'sin.alias.registrado'}</span>
+                          <button onClick={() => { setInputAlias(cuentaVista?.alias || ''); setEditandoAlias(true); }} className="btn-alias-edit">
+                            <Pencil size={11} /> Editar
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    {errorAlias && <span className="balance-alias-error">{errorAlias}</span>}
                   </div>
                 </div>
 
@@ -594,22 +750,6 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
                   <button className="action-card btn-transferencia" onClick={() => setVistaActual('transferencias')}>
                     <div className="action-icon"><Send size={24} /></div>
                     <span>Transferencias</span>
-                  </button>
-                  <button className="action-card btn-transferencia" onClick={() => setVistaActual('depositar')}>
-                    <div className="action-icon"><Download size={24} /></div>
-                    <span>Cargar Dinero</span>
-                  </button>
-                  <button className="action-card btn-transferencia" onClick={() => setVistaActual('recargas')}>
-                    <div className="action-icon"><Smartphone size={24} /></div>
-                    <span>Recarga de Celular</span>
-                  </button>
-                  <button className="action-card btn-transferencia" onClick={() => setVistaActual('servicios')}>
-                    <div className="action-icon"><Receipt size={24} /></div>
-                    <span>Pago de Servicios</span>
-                  </button>
-                  <button className="action-card btn-transferencia" onClick={() => setVistaActual('reservas')}>
-                    <div className="action-icon"><PiggyBank size={24} /></div>
-                    <span>Reservas y Ahorros</span>
                   </button>
                   <button className="action-card btn-transferencia" onClick={() => setVistaActual('tarjeta')}>
                     <div className="action-icon"><CreditCard size={24} /></div>
@@ -622,14 +762,6 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
                   <button className="action-card btn-transferencia" onClick={() => setVistaActual('prestamos')}>
                     <div className="action-icon"><Landmark size={24} /></div>
                     <span>Préstamos</span>
-                  </button>
-                  <button className="action-card btn-transferencia" onClick={() => setVistaActual('seguros')}>
-                    <div className="action-icon"><Shield size={24} /></div>
-                    <span>Seguros</span>
-                  </button>
-                  <button className="action-card btn-transferencia" onClick={() => setVistaActual('cedears')}>
-                    <div className="action-icon"><BarChart3 size={24} /></div>
-                    <span>CEDEARs</span>
                   </button>
                 </div>
 
@@ -650,7 +782,14 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
                         const esIngreso = valorMonto > 0;
 
                         return (
-                          <div className="transaction-item" key={tx.id_movimiento || tx.id}>
+                          <div
+                            className="transaction-item clicable"
+                            key={tx.id_movimiento || tx.id}
+                            onClick={() => setMovimientoSeleccionado(tx)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => { if (e.key === 'Enter') setMovimientoSeleccionado(tx); }}
+                          >
                             <div className={`tx-icon-container ${esIngreso ? 'tx-in' : 'tx-out'}`}>
                               {esIngreso ? <Download size={16} /> : <Send size={16} />}
                             </div>
@@ -811,6 +950,34 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
           />
         )}
 
+        {/* 3.12.1 VISTA CAMBIO DE DIVISA */}
+        {vistaActual === 'cambio' && (
+          <CambioDivisa
+            datosUsuario={datosUsuario}
+            cuentas={cuentasDisponibles}
+            monedaActiva={monedaActiva}
+            onCambiarMoneda={setMonedaActiva}
+            mostrarAbrirUSD={!cuentaUSD}
+            onAbrirUSD={handleAbrirCuentaUSD}
+            abriendoUSD={abriendoCuentaUSD}
+            alCambioExitoso={handleCambioDivisaExitoso}
+            alCancelar={handleVolverAlInicio}
+          />
+        )}
+
+        {/* 3.12.5. VISTA ASISTENTE IA — sin props: se autentica solo con el token de Clerk que
+            ya manda el fetch parcheado (ver config/api.js), no hace falta pasarle datosUsuario. */}
+        {vistaActual === 'asistente' && <Asistente />}
+
+        {/* 3.13. VISTA AJUSTES DE PERFIL */}
+        {vistaActual === 'ajustes' && (
+          <Ajustes
+            datosUsuario={datosUsuario}
+            alActualizarExitoso={actualizarDatosBase}
+            alCancelar={handleVolverAlInicio}
+          />
+        )}
+
         {/* 4. VISTA HISTORIAL COMPLETO (CON FILTROS DE FECHA Y REPORTES) */}
         {vistaActual === 'historial' && (
           <div className="history-page-container">
@@ -837,25 +1004,87 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
 
               {mostrarEstadisticas && (
                 <div className="stats-content">
-                  <div className="stats-summary-grid">
-                    <div className="stats-summary-card stats-ingresos">
-                      <span>TOTAL INGRESOS (FILTRADO)</span>
-                      <h3>{formatearMoneda(reporte.ingresos, monedaActiva)}</h3>
-                    </div>
-                    <div className="stats-summary-card stats-egresos">
-                      <span>TOTAL EGRESOS (FILTRADO)</span>
-                      <h3>{formatearMoneda(reporte.egresos, monedaActiva)}</h3>
+
+                  {/* 1. RESUMEN GENERAL */}
+                  <div className="stats-subsection">
+                    <h4 className="stats-subsection-title"><Layers size={13} /> Resumen general</h4>
+                    <div className="stats-summary-grid">
+                      <div className="stats-summary-card stats-ingresos">
+                        <span><TrendingUp size={12} /> INGRESOS</span>
+                        <h3>{formatearMoneda(reporte.ingresos, monedaActiva)}</h3>
+                      </div>
+                      <div className="stats-summary-card stats-egresos">
+                        <span><TrendingDown size={12} /> EGRESOS</span>
+                        <h3>{formatearMoneda(reporte.egresos, monedaActiva)}</h3>
+                      </div>
+                      <div className={`stats-summary-card ${(reporte.ingresos - reporte.egresos) >= 0 ? 'stats-ingresos' : 'stats-egresos'}`}>
+                        <span><DollarSign size={12} /> BALANCE NETO</span>
+                        <h3>{formatearMoneda(reporte.ingresos - reporte.egresos, monedaActiva)}</h3>
+                      </div>
+                      <div className="stats-summary-card stats-neutral">
+                        <span><Hash size={12} /> MOVIMIENTOS</span>
+                        <h3>{cantidadMovimientos}</h3>
+                      </div>
+                      <div className="stats-summary-card stats-neutral">
+                        <span><BarChart3 size={12} /> PROMEDIO / MOV.</span>
+                        <h3>{formatearMoneda(promedioMovimiento, monedaActiva)}</h3>
+                      </div>
                     </div>
                   </div>
 
-                  {Object.keys(resumenPorCategoria).length > 0 && (
-                    <div className="stats-category-grid">
-                      {Object.entries(resumenPorCategoria).map(([categoria, monto]) => (
-                        <div key={categoria} className="stats-category-card">
-                          <span>{categoria.replace(/_/g, ' ')}</span>
-                          <h4>{formatearMoneda(monto, monedaActiva)}</h4>
-                        </div>
-                      ))}
+                  {/* 2. POR CATEGORÍA */}
+                  {categoriasOrdenadas.length > 0 && (
+                    <div className="stats-subsection">
+                      <h4 className="stats-subsection-title"><Receipt size={13} /> Por categoría</h4>
+                      <div className="stats-category-list">
+                        {categoriasOrdenadas.map(([categoria, monto]) => {
+                          const porcentaje = totalCategorizado > 0 ? (monto / totalCategorizado) * 100 : 0;
+                          return (
+                            <div key={categoria} className="stats-category-row">
+                              <div className="stats-category-row-top">
+                                <span className="stats-category-nombre">{categoria.replace(/_/g, ' ')}</span>
+                                <span className="stats-category-monto">{formatearMoneda(monto, monedaActiva)} <em>({porcentaje.toFixed(1)}%)</em></span>
+                              </div>
+                              <div className="stats-category-bar-track">
+                                <div
+                                  className="stats-category-bar-fill"
+                                  style={{ width: `${maxCategoria > 0 ? (monto / maxCategoria) * 100 : 0}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 3. EVOLUCIÓN MENSUAL */}
+                  {resumenMensual.length > 0 && (
+                    <div className="stats-subsection">
+                      <h4 className="stats-subsection-title"><CalendarRange size={13} /> Evolución mensual</h4>
+                      <div className="stats-monthly-chart">
+                        {resumenMensual.map(mes => (
+                          <div key={mes.clave} className="stats-monthly-col">
+                            <div className="stats-monthly-bars">
+                              <div
+                                className="stats-monthly-bar stats-monthly-bar-ingreso"
+                                style={{ height: `${(mes.ingresos / maxMensual) * 100}%` }}
+                                title={`Ingresos: ${formatearMoneda(mes.ingresos, monedaActiva)}`}
+                              />
+                              <div
+                                className="stats-monthly-bar stats-monthly-bar-egreso"
+                                style={{ height: `${(mes.egresos / maxMensual) * 100}%` }}
+                                title={`Egresos: ${formatearMoneda(mes.egresos, monedaActiva)}`}
+                              />
+                            </div>
+                            <span className="stats-monthly-label">{mes.etiqueta}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="stats-monthly-legend">
+                        <span><i className="stats-monthly-bar-ingreso" /> Ingresos</span>
+                        <span><i className="stats-monthly-bar-egreso" /> Egresos</span>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -867,7 +1096,7 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
                 <p className="subtitle-gray">Controla tus finanzas con la claridad de las aguas de Calamuchita.</p>
               </div>
               <div className="history-actions-top">
-                <button className="btn-export-alt" onClick={exportarCSV} disabled={movimientosFiltrados.length === 0}><Download size={14} /> Exportar</button>
+                <button className="btn-export-alt" onClick={exportarExcel} disabled={movimientosFiltrados.length === 0}><Download size={14} /> Exportar Excel</button>
                 <button className="btn-new-payment-alt" onClick={() => setVistaActual('transferencias')}>+ Nueva Transferencia</button>
               </div>
             </div>
@@ -923,7 +1152,14 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
                       const tableRowKey = tx.id_movimiento || tx.id || `table-row-${index}`;
 
                       return (
-                        <tr key={tableRowKey}>
+                        <tr
+                          key={tableRowKey}
+                          className="clicable"
+                          onClick={() => setMovimientoSeleccionado(tx)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => { if (e.key === 'Enter') setMovimientoSeleccionado(tx); }}
+                        >
                           <td className="date-cell">{formatearFecha(tx.fecha_movimiento || tx.fecha)}</td>
                           <td>
                             <div className="detail-cell-info">
@@ -952,6 +1188,15 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
           </div>
         )}
       </main>
+
+      {movimientoSeleccionado && (
+        <ComprobanteMovimiento
+          movimiento={movimientoSeleccionado}
+          moneda={cuentaVista?.moneda}
+          formatearMoneda={formatearMoneda}
+          alCerrar={() => setMovimientoSeleccionado(null)}
+        />
+      )}
     </div>
   );
 }

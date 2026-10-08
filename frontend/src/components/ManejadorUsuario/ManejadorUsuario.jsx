@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useUser } from "@clerk/clerk-react";
 import { TriangleAlert } from "lucide-react";
 import FormularioOnboarding from "../FormularioOnboarding/FormularioOnboarding";
 import InicioBanco from "../InicioBanco/InicioBanco";
 import "./ManejadorUsuario.css";
+import { API_URL } from '../../config/api';
 
 export default function ManejadorUsuario() {
   const { user } = useUser();
@@ -15,11 +16,13 @@ export default function ManejadorUsuario() {
   const [errorConexion, setErrorConexion] = useState(false);
 
   // 🔄 FUNCIÓN DE RECARGA GLOBAL: Trae los datos frescos de Postgres
-  const cargarDatosUsuario = async () => {
+  // Envuelta en useCallback (identidad estable mientras no cambie `user`) para que InicioBanco
+  // pueda incluirla como dependencia de su efecto de heartbeat sin reiniciarlo en cada render.
+  const cargarDatosUsuario = useCallback(async () => {
     if (!user) return;
     setErrorConexion(false);
     try {
-      const res = await fetch(`http://localhost:3001/api/personas/verificar/${user.id}`);
+      const res = await fetch(`${API_URL}/api/personas/verificar/${user.id}`);
       if (res.ok) {
         const data = await res.json();
         setDatosPersona(data);
@@ -34,13 +37,16 @@ export default function ManejadorUsuario() {
     } finally {
       setCargando(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
-    if (user) {
+    if (!user) return;
+    let cancelado = false;
+    (async () => {
       setCargando(true);
-      cargarDatosUsuario();
-    }
+      if (!cancelado) await cargarDatosUsuario();
+    })();
+    return () => { cancelado = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 

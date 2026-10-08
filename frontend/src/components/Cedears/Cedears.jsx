@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import './Cedears.css';
+import { API_URL } from '../../config/api';
 
 export default function Cedears({ datosUsuario, alOrdenExitosa, alCancelar }) {
   const [catalogo, setCatalogo] = useState([]);
@@ -21,8 +22,8 @@ export default function Cedears({ datosUsuario, alOrdenExitosa, alCancelar }) {
   const cargarDatos = async () => {
     try {
       const [resCatalogo, resPortafolio] = await Promise.all([
-        fetch('http://localhost:3001/api/cedears/catalogo'),
-        fetch(`http://localhost:3001/api/cedears/persona/${datosUsuario.id}/portafolio`)
+        fetch(`${API_URL}/api/cedears/catalogo`),
+        fetch(`${API_URL}/api/cedears/persona/${datosUsuario.id}/portafolio`)
       ]);
       const dataCatalogo = await resCatalogo.json();
       const dataPortafolio = await resPortafolio.json();
@@ -39,7 +40,11 @@ export default function Cedears({ datosUsuario, alOrdenExitosa, alCancelar }) {
   };
 
   useEffect(() => {
-    cargarDatos();
+    let cancelado = false;
+    (async () => {
+      if (!cancelado) await cargarDatos();
+    })();
+    return () => { cancelado = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [datosUsuario?.id]);
 
@@ -57,7 +62,7 @@ export default function Cedears({ datosUsuario, alOrdenExitosa, alCancelar }) {
 
     try {
       setOperando(true);
-      const response = await fetch('http://localhost:3001/api/cedears/ordenes', {
+      const response = await fetch(`${API_URL}/api/cedears/ordenes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cbu: datosUsuario.cbu, ticker, cantidad: cantidadNum, tipo: tipoOrden })
@@ -80,6 +85,7 @@ export default function Cedears({ datosUsuario, alOrdenExitosa, alCancelar }) {
   return (
     <div className="cedears-container">
       <div className="cedears-header-box">
+        <span className="cedears-eyebrow">Mirá más allá del valle, sin perder el rumbo</span>
         <h2>Inversiones en CEDEARs</h2>
         <p>Comprá y vendé CEDEARs con cotización en vivo del mercado argentino.</p>
       </div>

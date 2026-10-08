@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Check, FileText, UserPlus, X } from 'lucide-react';
 import SelectorCuenta from '../SelectorCuenta/SelectorCuenta';
 import './Transferencias.css';
+import { API_URL } from '../../config/api';
 
 export default function Transferencias({ datosUsuario, cuentas, monedaActiva, onCambiarMoneda, mostrarAbrirUSD, onAbrirUSD, abriendoUSD, alTransferirExitosa, alCancelar }) {
   const [cbuDestino, setCbuDestino] = useState('');
@@ -74,7 +75,7 @@ export default function Transferencias({ datosUsuario, cuentas, monedaActiva, on
     setCargando(true);
 
     try {
-      const response = await fetch('http://localhost:3001/api/movimientos/transferir', {
+      const response = await fetch(`${API_URL}/api/movimientos/transferir`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -109,6 +110,7 @@ export default function Transferencias({ datosUsuario, cuentas, monedaActiva, on
         setMensaje({ tipo: 'error', texto: errorMostrar });
       }
     } catch (error) {
+      console.error('❌ Error de red al transferir:', error);
       setMensaje({ tipo: 'error', texto: 'Error de red: No se pudo conectar con el servidor.' });
     } finally {
       setCargando(false);
@@ -176,6 +178,7 @@ export default function Transferencias({ datosUsuario, cuentas, monedaActiva, on
         
         {/* COLUMNA IZQUIERDA: FORMULARIO */}
         <form className="transfer-form-card" onSubmit={handleTransferir}>
+          <span className="transfer-eyebrow">De cuenta a cuenta, con la calma del valle</span>
           <h3 className="form-card-title">Formulario de Envío</h3>
           
           {cuentas?.length > 0 && (
@@ -195,7 +198,9 @@ export default function Transferencias({ datosUsuario, cuentas, monedaActiva, on
           <div className="form-section">
             <label className="section-label">Destino de la transferencia</label>
             <div className="destination-type-toggle">
-              <button type="button" className="toggle-btn active"><UserPlus size={14} /> Nuevo destinatario</button>
+              {/* No es un botón: hoy solo existe esta única forma de transferir (por CBU/alias), así
+                  que se muestra como una etiqueta de contexto, no como algo clickeable que no hace nada. */}
+              <span className="toggle-btn active"><UserPlus size={14} /> Nuevo destinatario</span>
               <button type="button" className="toggle-btn cancel" onClick={alCancelar}><X size={14} /> Volver al Inicio</button>
             </div>
           </div>

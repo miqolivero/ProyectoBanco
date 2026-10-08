@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import './Recargas.css';
+import { API_URL } from '../../config/api';
 
 const OPERADORAS = ['Movistar', 'Personal', 'Claro', 'Tuenti'];
 
@@ -42,7 +43,7 @@ export default function Recargas({ datosUsuario, alRecargarExitoso, alCancelar }
 
     try {
       setCargando(true);
-      const response = await fetch('http://localhost:3001/api/movimientos/recargar', {
+      const response = await fetch(`${API_URL}/api/movimientos/recargar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -77,6 +78,7 @@ export default function Recargas({ datosUsuario, alRecargarExitoso, alCancelar }
   return (
     <div className="recargas-container">
       <div className="recargas-header-box">
+        <span className="recargas-eyebrow">Conectado, con la serenidad de Calamuchita</span>
         <h2>Recarga de Celular</h2>
         <p>Recargá saldo prepago en la operadora que elijas, al instante.</p>
       </div>
@@ -123,8 +125,8 @@ export default function Recargas({ datosUsuario, alRecargarExitoso, alCancelar }
 
           <div className="recargas-field">
             <label>Monto a Recargar (ARS)</label>
-            <div className="input-monto-wrapper">
-              <span className="currency-prefix">$</span>
+            <div className="recargas-monto-wrapper">
+              <span className="recargas-currency-prefix">$</span>
               <input
                 type="number"
                 placeholder="0.00"

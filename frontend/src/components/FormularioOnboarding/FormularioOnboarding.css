@@ -240,4 +240,8 @@
     max-width: 100%;
     padding: 30px 20px;
   }
+  .form-row {
+    flex-direction: column;
+    gap: 16px;
+  }
 }

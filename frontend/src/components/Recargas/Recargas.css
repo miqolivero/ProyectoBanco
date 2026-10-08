@@ -15,12 +15,14 @@
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
-  padding: 24px;
+  padding: 28px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
 }
 
 .recargas-info-panel h4 {
-  margin: 0 0 16px 0;
+  margin: 0 0 18px 0;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f3f4f6;
   font-size: 15px;
   color: #111827;
 }
@@ -31,11 +33,15 @@
   font-weight: 600;
   color: #6b7280;
   letter-spacing: 0.5px;
-  margin-top: 16px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #f3f4f6;
 }
 
 .recargas-info-panel .recargas-info-label:first-of-type {
   margin-top: 0;
+  padding-top: 0;
+  border-top: none;
 }
 
 .recargas-info-saldo {
@@ -67,6 +73,15 @@
   }
 }
 
+.recargas-eyebrow {
+  display: block;
+  font-size: 12.5px;
+  font-style: italic;
+  color: #0f3424;
+  opacity: 0.6;
+  margin-bottom: 6px;
+}
+
 .recargas-header-box h2 {
   font-size: 24px;
   color: #111827;
@@ -74,8 +89,14 @@
 }
 
 .recargas-header-box p {
-  color: #6b7280;
-  font-size: 14px;
+  color: #1a5c3f;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  background: linear-gradient(90deg, #eefdf4, rgba(238, 253, 244, 0));
+  border-left: 3px solid #2e7d4f;
+  padding: 8px 14px;
+  border-radius: 0 8px 8px 0;
   margin: 0 0 28px 0;
 }
 
@@ -143,35 +164,42 @@
   box-shadow: 0 0 0 3px rgba(15, 52, 36, 0.1);
 }
 
-.input-monto-wrapper {
-  position: relative;
+/* 🎯 Antes se llamaban .input-monto-wrapper / .currency-prefix — nombres genéricos que
+   colisionaban con las clases (idénticas) de Depositar.css. Vite no aísla el CSS por
+   componente (son hojas de estilo globales), así que la que cargara después pisaba a la
+   otra: el símbolo quedaba position:absolute superpuesto sobre el placeholder del otro
+   formulario. Prefijadas ahora, igual que el resto de las clases de este archivo. */
+.recargas-monto-wrapper {
   display: flex;
   align-items: center;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  transition: border-color 0.2s;
 }
 
-.currency-prefix {
-  position: absolute;
-  left: 16px;
+.recargas-monto-wrapper:focus-within {
+  border-color: #0f3424;
+  box-shadow: 0 0 0 3px rgba(15, 52, 36, 0.1);
+}
+
+.recargas-currency-prefix {
+  padding-left: 14px;
   font-size: 20px;
   font-weight: 600;
   color: #4b5563;
+  white-space: nowrap;
 }
 
 .recargas-input-monto {
-  width: 100%;
-  padding: 14px 14px 14px 40px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
+  flex: 1;
+  min-width: 0;
+  padding: 14px 14px 14px 6px;
+  border: none;
+  background: transparent;
   font-size: 20px;
   font-weight: 600;
   outline: none;
   color: #111827;
-  transition: border-color 0.2s;
-}
-
-.recargas-input-monto:focus {
-  border-color: #0f3424;
-  box-shadow: 0 0 0 3px rgba(15, 52, 36, 0.1);
 }
 
 /* Alertas */
@@ -245,4 +273,11 @@
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* 🎯 En celulares angostos, los 2 campos lado a lado quedaban muy apretados */
+@media (max-width: 480px) {
+  .recargas-row {
+    flex-direction: column;
+  }
 }

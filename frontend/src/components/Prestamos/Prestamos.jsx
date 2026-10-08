@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import './Prestamos.css';
+import { API_URL } from '../../config/api';
 
 export default function Prestamos({ datosUsuario, alSolicitarExitoso, alPagarExitoso, alCancelar }) {
   const [tasa, setTasa] = useState(null);
@@ -26,7 +27,7 @@ export default function Prestamos({ datosUsuario, alSolicitarExitoso, alPagarExi
 
   const cargarTasa = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/prestamos/tasa');
+      const response = await fetch(`${API_URL}/api/prestamos/tasa`);
       const data = await response.json();
       if (response.ok) setTasa(data);
     } catch {
@@ -38,7 +39,7 @@ export default function Prestamos({ datosUsuario, alSolicitarExitoso, alPagarExi
 
   const cargarCapacidad = async () => {
     try {
-      const response = await fetch(`http://localhost:3001/api/prestamos/capacidad?cbu=${datosUsuario.cbu}`);
+      const response = await fetch(`${API_URL}/api/prestamos/capacidad?cbu=${datosUsuario.cbu}`);
       const data = await response.json();
       if (response.ok) setCapacidad(data);
     } catch {
@@ -48,7 +49,7 @@ export default function Prestamos({ datosUsuario, alSolicitarExitoso, alPagarExi
 
   const cargarLista = async () => {
     try {
-      const response = await fetch(`http://localhost:3001/api/prestamos?cbu=${datosUsuario.cbu}`);
+      const response = await fetch(`${API_URL}/api/prestamos?cbu=${datosUsuario.cbu}`);
       const data = await response.json();
       if (response.ok && Array.isArray(data)) setPrestamos(data);
     } catch {
@@ -59,23 +60,30 @@ export default function Prestamos({ datosUsuario, alSolicitarExitoso, alPagarExi
   };
 
   useEffect(() => {
-    cargarTasa();
-    cargarCapacidad();
-    cargarLista();
+    let cancelado = false;
+    (async () => {
+      if (cancelado) return;
+      await Promise.all([cargarTasa(), cargarCapacidad(), cargarLista()]);
+    })();
+    return () => { cancelado = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [datosUsuario?.cbu]);
 
   useEffect(() => {
     const montoNum = Number(monto);
-    if (!montoNum || montoNum <= 0 || !plazoMeses) {
-      setSimulacion(null);
-      return;
-    }
     let cancelado = false;
+
+    // Todo el trabajo del efecto (incluido el caso "monto inválido, limpiar simulación")
+    // queda dentro de este callback async invocado por setTimeout, así ningún setState
+    // corre de forma sincrónica en el cuerpo del efecto (ver react-hooks/set-state-in-effect).
     const simular = async () => {
+      if (!montoNum || montoNum <= 0 || !plazoMeses) {
+        if (!cancelado) setSimulacion(null);
+        return;
+      }
       try {
         setSimulando(true);
-        const response = await fetch('http://localhost:3001/api/prestamos/simular', {
+        const response = await fetch(`${API_URL}/api/prestamos/simular`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ monto: montoNum, plazo_meses: Number(plazoMeses) })
@@ -88,6 +96,7 @@ export default function Prestamos({ datosUsuario, alSolicitarExitoso, alPagarExi
         if (!cancelado) setSimulando(false);
       }
     };
+
     const timeout = setTimeout(simular, 400); // debounce mientras el usuario escribe el monto
     return () => { cancelado = true; clearTimeout(timeout); };
   }, [monto, plazoMeses]);
@@ -105,10 +114,14 @@ export default function Prestamos({ datosUsuario, alSolicitarExitoso, alPagarExi
       setMensaje({ tipo: 'error', texto: `Superás tu capacidad de endeudamiento. Disponible: ${formatearMoneda(capacidad.disponible)}` });
       return;
     }
+    if (capacidad && capacidad.puedeSolicitar === false) {
+      setMensaje({ tipo: 'error', texto: `Ya tenés ${capacidad.prestamosActivos} préstamos activos, el máximo permitido. Pagá alguno para poder solicitar otro.` });
+      return;
+    }
 
     try {
       setSolicitando(true);
-      const response = await fetch('http://localhost:3001/api/prestamos', {
+      const response = await fetch(`${API_URL}/api/prestamos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cbu: datosUsuario.cbu, monto: montoNum, plazo_meses: Number(plazoMeses) })
@@ -133,7 +146,7 @@ export default function Prestamos({ datosUsuario, alSolicitarExitoso, alPagarExi
     setMensaje({ tipo: '', texto: '' });
     try {
       setPagandoId(idCuota);
-      const response = await fetch('http://localhost:3001/api/prestamos/pagar', {
+      const response = await fetch(`${API_URL}/api/prestamos/pagar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id_cuota: idCuota, cbu: datosUsuario.cbu })
@@ -155,6 +168,7 @@ export default function Prestamos({ datosUsuario, alSolicitarExitoso, alPagarExi
   return (
     <div className="prest-container">
       <div className="prest-header-box">
+        <span className="prest-eyebrow">Un impulso con los pies en la tierra calamuchitana</span>
         <h2>Préstamos Personales</h2>
         <p>Solicitá un préstamo con cuota fija y pagalo en cómodas cuotas mensuales.</p>
       </div>
@@ -167,9 +181,12 @@ export default function Prestamos({ datosUsuario, alSolicitarExitoso, alPagarExi
             <div>
               <span className="prest-tasa-label">TNA que cobra el banco</span>
               <strong className="prest-tasa-valor">{tasa.tnaOfrecida}%</strong>
+              {tasa.bonificado && <span className="prest-tasa-badge">Tasa bonificada</span>}
             </div>
             <span className="prest-tasa-detalle">
-              Tasa de referencia de mercado: {tasa.tasaReferencia}% (promedio de ~25 entidades, ArgentinaDatos) + {tasa.spreadBps} bps
+              {tasa.bonificado
+                ? `Tasa de referencia de mercado: ${tasa.tasaReferencia}% (promedio de ~25 entidades, ArgentinaDatos), sin spread — ya pagaste un préstamo anterior en tiempo y forma, así que no te cobramos el adicional del banco.`
+                : `Tasa de referencia de mercado: ${tasa.tasaReferencia}% (promedio de ~25 entidades, ArgentinaDatos) + ${tasa.spreadBps} bps`}
             </span>
           </>
         ) : (
@@ -216,8 +233,8 @@ export default function Prestamos({ datosUsuario, alSolicitarExitoso, alPagarExi
             </div>
           )}
 
-          <button type="submit" disabled={solicitando || !tasa} className="btn-prest-solicitar">
-            {solicitando ? 'Procesando...' : 'Solicitar Préstamo'}
+          <button type="submit" disabled={solicitando || !tasa || capacidad?.puedeSolicitar === false} className="btn-prest-solicitar">
+            {solicitando ? 'Procesando...' : capacidad?.puedeSolicitar === false ? 'Límite de préstamos alcanzado' : 'Solicitar Préstamo'}
           </button>
         </form>
 
@@ -282,7 +299,9 @@ export default function Prestamos({ datosUsuario, alSolicitarExitoso, alPagarExi
           </>
         )}
         <span className="prest-info-label">Préstamos activos</span>
-        <p className="prest-info-dato">{prestamos.filter(p => p.estado === 'ACTIVO').length}</p>
+        <p className="prest-info-dato">
+          {capacidad ? `${capacidad.prestamosActivos} / ${capacidad.maxPrestamosActivos}` : prestamos.filter(p => p.estado === 'ACTIVO').length}
+        </p>
       </div>
       </div>
     </div>

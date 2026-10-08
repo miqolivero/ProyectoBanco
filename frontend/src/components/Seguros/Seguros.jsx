@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import './Seguros.css';
+import { API_URL } from '../../config/api';
 
 export default function Seguros({ datosUsuario, alContratarExitoso, alCancelar }) {
   const [productos, setProductos] = useState([]);
@@ -24,8 +25,8 @@ export default function Seguros({ datosUsuario, alContratarExitoso, alCancelar }
   const cargarDatos = async () => {
     try {
       const [resProductos, resPolizas] = await Promise.all([
-        fetch('http://localhost:3001/api/seguros/productos'),
-        fetch(`http://localhost:3001/api/seguros/persona/${datosUsuario.id}`)
+        fetch(`${API_URL}/api/seguros/productos`),
+        fetch(`${API_URL}/api/seguros/persona/${datosUsuario.id}`)
       ]);
       const dataProductos = await resProductos.json();
       const dataPolizas = await resPolizas.json();
@@ -42,21 +43,29 @@ export default function Seguros({ datosUsuario, alContratarExitoso, alCancelar }
   };
 
   useEffect(() => {
-    cargarDatos();
+    let cancelado = false;
+    (async () => {
+      if (!cancelado) await cargarDatos();
+    })();
+    return () => { cancelado = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [datosUsuario?.id]);
 
   useEffect(() => {
     const suma = Number(sumaAsegurada);
-    if (!idProducto || !suma || suma <= 0) {
-      setCotizacion(null);
-      return;
-    }
     let cancelado = false;
-    const cotizar = async () => {
+
+    // Todo el trabajo del efecto (incluido el caso "monto inválido, limpiar cotización")
+    // queda dentro de este callback async invocado por setTimeout, así ningún setState
+    // corre de forma sincrónica en el cuerpo del efecto (ver react-hooks/set-state-in-effect).
+    const ejecutar = async () => {
+      if (!idProducto || !suma || suma <= 0) {
+        if (!cancelado) setCotizacion(null);
+        return;
+      }
       try {
         setCotizando(true);
-        const response = await fetch('http://localhost:3001/api/seguros/cotizar', {
+        const response = await fetch(`${API_URL}/api/seguros/cotizar`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ idPersona: datosUsuario.id, id_producto_seguro: Number(idProducto), suma_asegurada: suma })
@@ -72,7 +81,8 @@ export default function Seguros({ datosUsuario, alContratarExitoso, alCancelar }
         if (!cancelado) setCotizando(false);
       }
     };
-    const timeout = setTimeout(cotizar, 400);
+
+    const timeout = setTimeout(ejecutar, 400); // debounce mientras el usuario escribe el monto
     return () => { cancelado = true; clearTimeout(timeout); };
   }, [idProducto, sumaAsegurada, datosUsuario?.id]);
 
@@ -87,7 +97,7 @@ export default function Seguros({ datosUsuario, alContratarExitoso, alCancelar }
 
     try {
       setContratando(true);
-      const response = await fetch('http://localhost:3001/api/seguros/contratar', {
+      const response = await fetch(`${API_URL}/api/seguros/contratar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -117,7 +127,7 @@ export default function Seguros({ datosUsuario, alContratarExitoso, alCancelar }
     setMensaje({ tipo: '', texto: '' });
     try {
       setCancelandoId(idPoliza);
-      const response = await fetch('http://localhost:3001/api/seguros/cancelar', {
+      const response = await fetch(`${API_URL}/api/seguros/cancelar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id_poliza: idPoliza, idPersona: datosUsuario.id })
@@ -137,6 +147,7 @@ export default function Seguros({ datosUsuario, alContratarExitoso, alCancelar }
   return (
     <div className="seguros-container">
       <div className="seguros-header-box">
+        <span className="seguros-eyebrow">Protección con la firmeza de la Sierra Chica</span>
         <h2>Seguros</h2>
         <p>Cotizá y contratá coberturas para vos y tu familia.</p>
       </div>
