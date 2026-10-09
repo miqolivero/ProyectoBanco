@@ -44,23 +44,35 @@ además que **el recurso pedido sea del titular de la sesión** (`exigirCbuPropi
 
 ### Endpoints públicos
 
-Estos no requieren token, porque no exponen datos de nadie:
+Estos se pueden llamar sin token, porque no exponen datos de nadie: devuelven datos de
+referencia iguales para todo el mundo, o el estado del servicio.
 
-| Endpoint | Por qué es público |
+| Endpoint | Qué devuelve |
 |---|---|
-| `GET /api/health` | Diagnóstico del servicio |
-| `POST /api/personas` | Registro: la persona todavía no existe en la base |
-| `GET /api/personas/clerk/:clerkId` | Consulta previa al registro |
-| `GET /api/personas/verificar/:clerkId` | Consulta previa al registro |
+| `GET /api/health` | Estado del servicio y de la conexión a la base |
 | `GET /api/movimientos/cambio/cotizacion` | Cotización pública del dólar |
 | `GET /api/plazos-fijos/tasa` | Tasa de referencia pública |
 | `GET /api/servicios/empresas` | Catálogo de empresas de servicios |
-| `GET /api/servicios/empresas/:idEmpresa/deuda` | Consulta de deuda por número de cliente |
+| `GET /api/servicios/empresas/:idEmpresa/deuda` | Facturas impagas de un número de cliente |
 | `GET /api/seguros/productos` | Catálogo de productos de seguro |
 | `GET /api/cedears/catalogo` | Cotizaciones del mercado |
 
-> Los tres de `/api/personas` igual verifican que el `clerkId` consultado sea el de la sesión si
-> hay una sesión activa, para que no se usen como buscador de usuarios ajenos.
+### Endpoints que exigen sesión pero no pasan por `requireAuth`
+
+Son tres, y los tres son del alta de usuario. `requireAuth` no les sirve porque ese middleware
+busca la fila local de la persona, que durante el registro todavía no existe. Pero **no son
+públicos**: validan la sesión dentro del controlador y exigen que el `clerkId` de la URL o del
+body sea exactamente el de la sesión que hace la request. Sin sesión, o con el `clerkId` de otro,
+responden `401`.
+
+| Endpoint | Por qué no usa `requireAuth` |
+|---|---|
+| `POST /api/personas` | Crea la fila local: todavía no hay nada que buscar |
+| `GET /api/personas/clerk/:clerkId` | Consulta si el usuario de Clerk ya completó el onboarding |
+| `GET /api/personas/verificar/:clerkId` | Igual que el anterior (alias histórico) |
+
+Esa validación es la que evita que se usen como buscador de usuarios ajenos: sin ella,
+cualquiera con un `clerkId` podría leer nombre, DNI, email y CBU de esa persona.
 
 ---
 
