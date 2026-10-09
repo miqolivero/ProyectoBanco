@@ -4,7 +4,9 @@ API REST del backend de Calamuchita Bank. **55 endpoints** agrupados por recurso
 
 - **URL base en desarrollo:** `http://localhost:3001`
 - **Formato:** JSON en request y response (`Content-Type: application/json`)
-- **Colección de Postman:** [`files/postman.collection.json`](../files/postman.collection.json)
+- **Colección de Postman:** [`files/postman.collection.json`](../files/postman.collection.json) —
+  los 55 endpoints en carpetas, con el token de Clerk ya configurado como variable de colección
+  (ver [README → Probar la API](../README.md#con-la-colección-de-postman))
 
 ---
 

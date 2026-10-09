@@ -1,55 +1,77 @@
 {
   "info": {
-    "name": "API Banco",
+    "name": "Calamuchita Bank - API local",
+    "description": "API REST propia de Calamuchita Bank (no la del Banco Central de la catedra).\n\nANTES DE EMPEZAR: casi todos los endpoints exigen un JWT de sesion de Clerk. Para\nconseguirlo hay que entrar al frontend (http://localhost:5173), iniciar sesion, abrir\nlas DevTools del navegador y copiar el token de cualquier request a /api/ (header\nAuthorization: Bearer ...). Pegarlo en la variable `token` de la coleccion.\n\nLos requests marcados \"No Auth\" son los que no exponen datos de nadie: health, las\ncotizaciones y los catalogos.\n\nDocumentacion completa de cada endpoint: docs/API.md",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001",
+      "description": "En produccion: https://<tu-app>.onrender.com"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "description": "JWT de sesion de Clerk (ver la descripcion de la coleccion)"
+    },
+    {
+      "key": "clerkId",
+      "value": "",
+      "description": "ID del usuario en Clerk, ej: user_2abc..."
+    },
+    {
+      "key": "idPersona",
+      "value": "1",
+      "description": "Tiene que ser la persona del token, si no responde 403"
+    },
+    {
+      "key": "cbu",
+      "value": "",
+      "description": "CBU propio. Los datos de ejemplo cargan varios (ver docs/BASE-DE-DATOS.md)"
+    },
+    {
+      "key": "cbuDestino",
+      "value": "",
+      "description": "CBU o alias de destino, puede ser de otro banco de la red"
+    }
+  ],
   "item": [
     {
-      "name": "Con joins",
+      "name": "00. Health check",
+      "description": "Lo primero que conviene correr: confirma que el server levanto y que llega a la base.",
       "item": [
         {
-          "name": "Obtener Personas (con joins)",
+          "name": "Estado del servicio y de la base",
           "request": {
             "method": "GET",
-            "url": {
-              "raw": "http://localhost:3001/api/personas",
-              "protocol": "http",
-              "host": ["localhost"],
-              "port": "3001",
-              "path": ["api", "personas"]
+            "url": "{{baseUrl}}/api/health",
+            "auth": {
+              "type": "noauth"
             }
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "01. Personas y cuentas",
+      "description": "Alta de usuario y datos del titular. El POST y los dos /clerk no pasan por requireAuth (la fila local todavia no existe) pero exigen que el clerkId sea el de la sesion.",
+      "item": [
         {
-          "name": "Roles de una Persona",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "http://localhost:3001/api/personas/1/roles",
-              "protocol": "http",
-              "host": ["localhost"],
-              "port": "3001",
-              "path": ["api", "personas", "1", "roles"]
-            }
-          }
-        },
-        {
-          "name": "Productos de una Persona",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "http://localhost:3001/api/personas/3/productos",
-              "protocol": "http",
-              "host": ["localhost"],
-              "port": "3001",
-              "path": ["api", "personas", "3", "productos"]
-            }
-          }
-        },
-        {
-          "name": "Crear Persona",
+          "name": "Crear persona (onboarding) - exige sesion de Clerk",
           "request": {
             "method": "POST",
+            "url": "{{baseUrl}}/api/personas",
             "header": [
               {
                 "key": "Content-Type",
@@ -58,128 +80,860 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Laura\",\n  \"apellido\": \"Martínez\",\n  \"dni\": \"41000000\",\n  \"email\": \"laura.m@email.com\"\n}",
+              "raw": "{\n  \"nombre\": \"Laura\",\n  \"apellido\": \"Martinez\",\n  \"dni\": \"41000000\",\n  \"email\": \"laura.m@email.com\",\n  \"telefono\": \"3546445566\",\n  \"fecha_nacimiento\": \"1998-03-22\",\n  \"direccion\": \"Belgrano 120, Villa General Belgrano\",\n  \"alias\": \"laura.martinez.aho\",\n  \"clerkId\": \"{{clerkId}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
-            },
-            "url": {
-              "raw": "http://localhost:3001/api/personas",
-              "protocol": "http",
-              "host": ["localhost"],
-              "port": "3001",
-              "path": ["api", "personas"]
+            }
+          }
+        },
+        {
+          "name": "Verificar si el usuario ya hizo el onboarding",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/personas/verificar/{{clerkId}}"
+          }
+        },
+        {
+          "name": "Buscar persona por clerkId (solo el propio)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/personas/clerk/{{clerkId}}"
+          }
+        },
+        {
+          "name": "Listar personas (con joins)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/personas"
+          }
+        },
+        {
+          "name": "Roles de una persona",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/personas/{{idPersona}}/roles"
+          }
+        },
+        {
+          "name": "Productos de una persona",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/personas/{{idPersona}}/productos"
+          }
+        },
+        {
+          "name": "Ver caja de ahorro en USD",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/personas/{{idPersona}}/cuenta-usd"
+          }
+        },
+        {
+          "name": "Abrir caja de ahorro en USD",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/personas/{{idPersona}}/cuenta-usd"
+          }
+        },
+        {
+          "name": "Cambiar el alias de la cuenta",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/personas/{{cbu}}/alias",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nuevoAlias\": \"laura.ahorro.usd\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Actualizar datos de contacto",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/personas/{{idPersona}}/perfil",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"laura.nueva@email.com\",\n  \"telefono\": \"3546447788\",\n  \"direccion\": \"Sarmiento 45, Santa Rosa de Calamuchita\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           }
         }
       ]
     },
     {
-      "name": "Tablas crudas (sin joins)",
+      "name": "02. Movimientos",
+      "description": "Transferencias (propias y a otros bancos de la red del Banco Central), depositos, recargas y cambio de divisa.",
       "item": [
         {
-          "name": "Personas",
+          "name": "Historial de la cuenta",
           "request": {
             "method": "GET",
-            "url": {
-              "raw": "http://localhost:3001/api/tablas/personas",
-              "protocol": "http",
-              "host": ["localhost"],
-              "port": "3001",
-              "path": ["api", "tablas", "personas"]
+            "url": "{{baseUrl}}/api/movimientos/historial?cbu={{cbu}}"
+          }
+        },
+        {
+          "name": "Validar destino y traer el titular",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/movimientos/validar-destino/{{cbuDestino}}"
+          }
+        },
+        {
+          "name": "Transferir (acepta CBU o alias en cbu_destino)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/movimientos/transferir",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cbu_origen\": \"{{cbu}}\",\n  \"cbu_destino\": \"{{cbuDestino}}\",\n  \"monto\": 1500.5,\n  \"concepto\": \"Pago alquiler\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           }
         },
         {
-          "name": "Roles",
+          "name": "Sincronizar transferencias recibidas de otros bancos",
           "request": {
             "method": "GET",
-            "url": {
-              "raw": "http://localhost:3001/api/tablas/roles",
-              "protocol": "http",
-              "host": ["localhost"],
-              "port": "3001",
-              "path": ["api", "tablas", "roles"]
+            "url": "{{baseUrl}}/api/movimientos/sincronizar?minutos=30"
+          }
+        },
+        {
+          "name": "Depositar en efectivo",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/movimientos/depositar",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cbu\": \"{{cbu}}\",\n  \"monto\": 25000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           }
         },
         {
-          "name": "Roles x Personas",
+          "name": "Recargar celular / transporte",
           "request": {
-            "method": "GET",
-            "url": {
-              "raw": "http://localhost:3001/api/tablas/roles_x_personas",
-              "protocol": "http",
-              "host": ["localhost"],
-              "port": "3001",
-              "path": ["api", "tablas", "roles_x_personas"]
+            "method": "POST",
+            "url": "{{baseUrl}}/api/movimientos/recargar",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cbu\": \"{{cbu}}\",\n  \"monto\": 3000,\n  \"operadora\": \"Claro\",\n  \"numero\": \"3546441122\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           }
         },
         {
-          "name": "Tipos de Producto",
+          "name": "Cotizacion del dolar",
           "request": {
             "method": "GET",
-            "url": {
-              "raw": "http://localhost:3001/api/tablas/tipos_producto",
-              "protocol": "http",
-              "host": ["localhost"],
-              "port": "3001",
-              "path": ["api", "tablas", "tipos_producto"]
+            "url": "{{baseUrl}}/api/movimientos/cambio/cotizacion",
+            "auth": {
+              "type": "noauth"
             }
           }
         },
         {
-          "name": "Estados de Producto",
+          "name": "Comprar o vender dolares (el sentido lo define la moneda del CBU)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/movimientos/cambio",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cbu\": \"{{cbu}}\",\n  \"monto\": 100000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03. Pago de servicios",
+      "description": "Facturas de las empresas adheridas y debitos automaticos agendados.",
+      "item": [
+        {
+          "name": "Catalogo de empresas",
           "request": {
             "method": "GET",
-            "url": {
-              "raw": "http://localhost:3001/api/tablas/estados_producto",
-              "protocol": "http",
-              "host": ["localhost"],
-              "port": "3001",
-              "path": ["api", "tablas", "estados_producto"]
+            "url": "{{baseUrl}}/api/servicios/empresas",
+            "auth": {
+              "type": "noauth"
             }
           }
         },
         {
-          "name": "Productos",
+          "name": "Consultar deuda por numero de cliente",
           "request": {
             "method": "GET",
-            "url": {
-              "raw": "http://localhost:3001/api/tablas/productos",
-              "protocol": "http",
-              "host": ["localhost"],
-              "port": "3001",
-              "path": ["api", "tablas", "productos"]
+            "url": "{{baseUrl}}/api/servicios/empresas/1/deuda?numero_cliente=1001",
+            "auth": {
+              "type": "noauth"
             }
           }
         },
         {
-          "name": "Cuentas Bancarias",
+          "name": "Pagar una factura",
           "request": {
-            "method": "GET",
-            "url": {
-              "raw": "http://localhost:3001/api/tablas/cuentas_bancarias",
-              "protocol": "http",
-              "host": ["localhost"],
-              "port": "3001",
-              "path": ["api", "tablas", "cuentas_bancarias"]
+            "method": "POST",
+            "url": "{{baseUrl}}/api/servicios/pagar",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_factura\": 1,\n  \"cbu\": \"{{cbu}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           }
         },
         {
-          "name": "Tarjetas de Crédito",
+          "name": "Listar servicios agendados",
           "request": {
             "method": "GET",
-            "url": {
-              "raw": "http://localhost:3001/api/tablas/tarjetas_credito",
-              "protocol": "http",
-              "host": ["localhost"],
-              "port": "3001",
-              "path": ["api", "tablas", "tarjetas_credito"]
+            "url": "{{baseUrl}}/api/servicios/agendados?idPersona={{idPersona}}"
+          }
+        },
+        {
+          "name": "Agendar un servicio",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/servicios/agendados",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idPersona\": \"{{idPersona}}\",\n  \"id_empresa\": 1,\n  \"numero_cliente\": \"1001\",\n  \"alias\": \"Luz de casa\",\n  \"monto_fijo\": null,\n  \"dia_vencimiento\": 10,\n  \"debito_automatico\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Editar un servicio agendado",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/servicios/agendados/1",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idPersona\": \"{{idPersona}}\",\n  \"alias\": \"Luz (casa nueva)\",\n  \"monto_fijo\": 18000,\n  \"dia_vencimiento\": 15,\n  \"debito_automatico\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Eliminar un servicio agendado",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/servicios/agendados/1"
+          }
+        },
+        {
+          "name": "Ejecutar los debitos automaticos pendientes",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/servicios/agendados/debitar",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idPersona\": \"{{idPersona}}\",\n  \"cbu\": \"{{cbu}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04. Reservas y ahorros",
+      "description": "Sobres de ahorro: apartan plata de la cuenta sin sacarla del banco.",
+      "item": [
+        {
+          "name": "Listar reservas de la cuenta",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/reservas?cbu={{cbu}}"
+          }
+        },
+        {
+          "name": "Crear una reserva",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/reservas",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cbu\": \"{{cbu}}\",\n  \"nombre\": \"Vacaciones 2027\",\n  \"monto_objetivo\": 500000,\n  \"fecha_meta\": \"2027-01-15\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Aportar a una reserva",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/reservas/aportar",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_reserva\": 1,\n  \"monto\": 20000,\n  \"cbu\": \"{{cbu}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Retirar de una reserva",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/reservas/retirar",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_reserva\": 1,\n  \"monto\": 5000,\n  \"cbu\": \"{{cbu}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Eliminar una reserva (devuelve el saldo a la cuenta)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/reservas/1",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cbu\": \"{{cbu}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05. Tarjetas de credito",
+      "description": "Solicitud de tarjeta, consumos en cuotas y pago de cuotas.",
+      "item": [
+        {
+          "name": "Tarjetas de la persona con sus consumos",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/tarjetas/persona/{{idPersona}}"
+          }
+        },
+        {
+          "name": "Solicitar una tarjeta",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/tarjetas/solicitar",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idPersona\": \"{{idPersona}}\",\n  \"marca\": \"Visa\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Registrar un consumo en cuotas",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/tarjetas/consumos",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_tarjeta\": 1,\n  \"comercio\": \"Supermercado Calamuchita\",\n  \"monto_total\": 90000,\n  \"cantidad_cuotas\": 3,\n  \"idPersona\": \"{{idPersona}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Pagar una cuota de la tarjeta",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/tarjetas/pagar",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_cuota\": 1,\n  \"cbu\": \"{{cbu}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06. Plazos fijos",
+      "description": "La tasa sale del promedio de bancos que publica ArgentinaDatos. Minimo 30 dias (regulacion del BCRA).",
+      "item": [
+        {
+          "name": "Tasa vigente",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/plazos-fijos/tasa",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Plazos fijos de la cuenta",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/plazos-fijos?cbu={{cbu}}"
+          }
+        },
+        {
+          "name": "Constituir un plazo fijo",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/plazos-fijos",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cbu\": \"{{cbu}}\",\n  \"capital\": 200000,\n  \"plazo_dias\": 30\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Liquidar al vencimiento",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/plazos-fijos/liquidar",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_plazo_fijo\": 1,\n  \"cbu\": \"{{cbu}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "07. Prestamos",
+      "description": "La tasa es personalizada segun el historial, asi que hasta /tasa pide token.",
+      "item": [
+        {
+          "name": "Tasa vigente para esta persona",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/prestamos/tasa"
+          }
+        },
+        {
+          "name": "Simular cuota y tabla de amortizacion",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/prestamos/simular",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"monto\": 300000,\n  \"plazo_meses\": 12\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Capacidad de endeudamiento disponible",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/prestamos/capacidad?cbu={{cbu}}"
+          }
+        },
+        {
+          "name": "Prestamos de la cuenta con sus cuotas",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/prestamos?cbu={{cbu}}"
+          }
+        },
+        {
+          "name": "Solicitar un prestamo",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/prestamos",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cbu\": \"{{cbu}}\",\n  \"monto\": 300000,\n  \"plazo_meses\": 12\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Pagar una cuota",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/prestamos/pagar",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_cuota\": 1,\n  \"cbu\": \"{{cbu}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "08. Seguros",
+      "description": "Cotizacion y contratacion de polizas. La prima se debita mensualmente.",
+      "item": [
+        {
+          "name": "Catalogo de productos de seguro",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/seguros/productos",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Cotizar una poliza",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/seguros/cotizar",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idPersona\": \"{{idPersona}}\",\n  \"id_producto_seguro\": 1,\n  \"suma_asegurada\": 2000000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Contratar una poliza",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/seguros/contratar",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cbu\": \"{{cbu}}\",\n  \"id_producto_seguro\": 1,\n  \"suma_asegurada\": 2000000,\n  \"beneficiarios\": \"Maria Garcia (conyuge)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Polizas de la persona",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/seguros/persona/{{idPersona}}"
+          }
+        },
+        {
+          "name": "Cancelar una poliza",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/seguros/cancelar",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_poliza\": 1,\n  \"idPersona\": \"{{idPersona}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "09. Inversiones en CEDEARs",
+      "description": "Compra y venta de CEDEARs. Las cotizaciones vienen de una API externa.",
+      "item": [
+        {
+          "name": "Catalogo con cotizaciones del mercado",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/cedears/catalogo",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Registrar una orden (tipo: COMPRA o VENTA)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/cedears/ordenes",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cbu\": \"{{cbu}}\",\n  \"ticker\": \"AAPL\",\n  \"cantidad\": 5,\n  \"tipo\": \"COMPRA\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Portafolio de la persona",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/cedears/persona/{{idPersona}}/portafolio"
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Asistente con IA",
+      "description": "Calamuchita IA (Gemini). La identidad NUNCA viaja en el body: sale del token, asi que no se puede preguntar por la cuenta de otro. interactionId mantiene el hilo de la conversacion.",
+      "item": [
+        {
+          "name": "Consultar al asistente",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/asistente/chat",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mensaje\": \"Cuanto tengo en la caja de ahorro en pesos?\",\n  \"interactionId\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           }
         }

@@ -360,22 +360,24 @@ La referencia completa está en **[docs/API.md](docs/API.md)**.
 
 ### Con la colección de Postman
 
-El repositorio incluye [`files/postman.collection.json`](files/postman.collection.json). Para
-usarla: *Import → Upload Files* y seleccionar el archivo.
+El repositorio incluye [`files/postman.collection.json`](files/postman.collection.json), con los
+**55 endpoints** agrupados en carpetas por recurso. Para usarla: *Import → Upload Files* y
+seleccionar el archivo.
 
-Conviene crear una variable de entorno en Postman para no repetir la URL:
+La colección ya trae sus propias variables, así que no hay que armar nada a mano:
 
-| Variable | Valor |
+| Variable | Para qué |
 |---|---|
-| `base_url` | `http://localhost:3001` |
+| `baseUrl` | `http://localhost:3001` en local, o la URL de Render en producción |
+| `token` | El JWT de sesión de Clerk — **es el único que hay que completar** |
+| `clerkId`, `idPersona`, `cbu`, `cbuDestino` | Los datos de la cuenta con la que se prueba |
 
-Y usar las URLs así:
+**Cómo conseguir el `token`:** iniciar sesión en el frontend, abrir las DevTools del navegador
+(pestaña *Network*), y copiar el header `Authorization: Bearer ...` de cualquier request a
+`/api/`. Va en la variable `token`; la colección lo manda en todos los requests que lo necesitan.
 
-```
-GET  {{base_url}}/api/health
-GET  {{base_url}}/api/personas
-POST {{base_url}}/api/movimientos/transferir
-```
+Los 7 requests marcados **No Auth** son los públicos (health, cotizaciones y catálogos) y
+funcionan sin completar nada. El resto, sin token, responde `401`.
 
 ### Con `curl`
 
