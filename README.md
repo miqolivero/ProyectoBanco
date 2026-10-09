@@ -25,11 +25,8 @@ la cuenta en lenguaje natural.
 4. [Documentación](#documentación)
 5. [Cómo levantar el proyecto](#cómo-levantar-el-proyecto)
 6. [Despliegue a producción](#despliegue-a-producción)
-7. [Datos de ejemplo](#datos-de-ejemplo)
-8. [Esquema de la base de datos](#esquema-de-la-base-de-datos)
-9. [Diagrama de entidad-relación (DER)](#diagrama-de-entidad-relación-der)
-10. [Estructura del proyecto](#estructura-del-proyecto)
-11. [Probar la API](#probar-la-api)
+7. [Estructura del proyecto](#estructura-del-proyecto)
+8. [Probar la API](#probar-la-api)
 
 ---
 
@@ -76,6 +73,19 @@ routes/  →  controllers/  →  models/  →  PostgreSQL
 
 Ese patrón se respetó sin excepciones, así que entender una operación alcanza para entender cómo
 están hechas las demás.
+
+### El modelo de datos en una idea
+
+`Productos` es la tabla central: una persona no tiene "cuentas" y "tarjetas" por separado, tiene
+**productos contratados**, y cada producto se especializa en una tabla 1:1 (`Cuentas_Bancarias` o
+`Tarjetas_Credito`). Gracias a eso, agregar la cuenta en dólares fue simplemente un `Producto`
+más, **sin tocar el esquema**.
+
+La otra decisión que lo define es que el saldo de una cuenta es exactamente la suma de sus
+movimientos: el historial es la fuente de verdad, no un registro paralelo.
+
+Las 22 tablas, el DER y los datos de ejemplo están en
+**[docs/BASE-DE-DATOS.md](docs/BASE-DE-DATOS.md)**.
 
 ### Stack
 
@@ -181,12 +191,17 @@ prompt injection.
 
 ## Documentación
 
-| Documento | Qué contiene |
-|---|---|
-| **[docs/DECISIONES.md](docs/DECISIONES.md)** | Por qué el sistema está hecho así: decisiones de negocio y técnicas, riesgos identificados y cómo se mitigaron |
-| **[docs/API.md](docs/API.md)** | Referencia de los 55 endpoints: parámetros, respuestas y errores |
-| **[docs/MANUAL-USUARIO.md](docs/MANUAL-USUARIO.md)** | Cómo se usa el sistema, sin tecnicismos, con **43 casos de prueba documentados** y glosario |
-| **[DESARROLLO.md](DESARROLLO.md)** | Bitácora del proyecto fase por fase: qué se construyó, qué se rompió y cómo se resolvió |
+Este README es la puerta de entrada: qué es el sistema, cómo está construido y cómo correrlo. Lo
+demás vive en documentos propios, para que cada uno se pueda leer sin leer el resto.
+
+| Documento | Qué contiene | Para quién |
+|---|---|---|
+| **[docs/DECISIONES.md](docs/DECISIONES.md)** | Por qué el sistema está hecho así: decisiones de negocio y técnicas, riesgos identificados y cómo se mitigaron, y lo que se decidió no hacer | Quien evalúa o va a modificar el proyecto |
+| **[docs/MANUAL-USUARIO.md](docs/MANUAL-USUARIO.md)** | Cómo se usa cada pantalla, sin tecnicismos, con **43 casos de prueba documentados** y glosario | Quien usa el sistema |
+| **[docs/API.md](docs/API.md)** | Referencia de los 55 endpoints: parámetros, respuestas y errores | Quien integra o prueba la API |
+| **[docs/BASE-DE-DATOS.md](docs/BASE-DE-DATOS.md)** | Las 22 tablas columna por columna, el DER y los datos de ejemplo | Quien consulta o modifica el modelo de datos |
+| **[docs/DESPLIEGUE.md](docs/DESPLIEGUE.md)** | Guía paso a paso para publicar en Supabase, Render y Vercel | Quien pone el sistema en línea |
+| **[DESARROLLO.md](DESARROLLO.md)** | Bitácora fase por fase: qué se construyó, qué se rompió y cómo se resolvió | Quien quiere seguir el proceso |
 
 ---
 
@@ -284,351 +299,13 @@ curl http://localhost:3001/api/health
 
 ## Despliegue a producción
 
-Arquitectura del despliegue: **base de datos en Supabase**, **backend en Render**, **frontend en
-Vercel**.
+El sistema se despliega en tres servicios: **base de datos en Supabase**, **backend en Render** y
+**frontend en Vercel**. El orden importa, porque cada uno necesita la URL del anterior.
 
-El orden importa: cada servicio necesita la URL del anterior, así que hay que hacerlo de abajo
-hacia arriba (base → backend → frontend) y al final volver a Render para cerrar el círculo del
-CORS.
+👉 **La guía paso a paso está en [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md)**, incluyendo las
+variables de entorno de cada servicio, el checklist post-deploy y el detalle de por qué hay que
+usar el *Session pooler* de Supabase y no la conexión directa.
 
-### 1. Base de datos — Supabase
-
-1. Crear un proyecto nuevo en [supabase.com](https://supabase.com) y **guardar la contraseña de
-   la base** que se genera (después no se puede volver a ver, solo resetear).
-2. En el **SQL Editor** del dashboard, pegar y ejecutar el contenido de los scripts **en este
-   orden**:
-   - `backend/init/01_schema.sql` (tablas + datos maestros)
-   - `backend/init/02_data.sql` (datos de ejemplo)
-
-3. Copiar la cadena de conexión: botón **Connect** del dashboard (o *Project Settings →
-   Database*) → pestaña **Session pooler**.
-
-   Tiene esta forma, con puerto **5432** y host `pooler.supabase.com`:
-
-   ```
-   postgresql://postgres.<project-ref>:<TU-PASSWORD>@aws-0-<region>.pooler.supabase.com:5432/postgres
-   ```
-
-   **Por qué el Session pooler y no las otras dos opciones:**
-
-   | Opción | Puerto | Problema |
-   |---|---|---|
-   | Direct connection | 5432 (`db.<ref>.supabase.co`) | Es **IPv6 only**, y Render no tiene IPv6 saliente → falla con `ENOTFOUND` |
-   | Transaction pooler | 6543 | No soporta estado de sesión; este proyecto usa transacciones explícitas `BEGIN/COMMIT` y `SELECT ... FOR UPDATE` en todas las operaciones que mueven plata |
-   | **Session pooler** | **5432** (`pooler`) | ✅ Es IPv4 y se comporta igual que una conexión directa |
-
-   No hace falta agregarle `?sslmode=` ni `?pgbouncer=true`: `backend/config/db.js` ya activa SSL
-   automáticamente cuando la base no es `localhost`.
-
-### 2. Backend — Render
-
-1. *New → Web Service* → conectar el repositorio.
-2. Configuración:
-   - **Root Directory**: `backend` ← el backend no está en la raíz del repo
-   - **Build Command**: `npm install`
-   - **Start Command**: `npm start`
-   - **Health Check Path**: `/api/health`
-3. Variables de entorno (*Environment*) — las mismas de `backend/.env.example`, **menos `PORT`**
-   (Render inyecta el suyo y `app.js` ya lo lee):
-
-   | Variable | Valor |
-   |---|---|
-   | `DATABASE_URL` | la cadena del Session pooler del paso 1 |
-   | `CENTRAL_BANK_API_KEY` | la key de la API de la cátedra |
-   | `CLERK_SECRET_KEY` | `sk_...` (del dashboard de Clerk) |
-   | `CLERK_PUBLISHABLE_KEY` | `pk_...` (la misma que usa el frontend) |
-   | `GEMINI_API_KEY` | la key de Google AI Studio |
-   | `FRONTEND_URL` | *(se completa en el paso 4)* |
-
-4. Verificar el deploy entrando a `https://<tu-app>.onrender.com/api/health`. Tiene que devolver:
-
-   ```json
-   { "ok": true, "db": "ok" }
-   ```
-
-   Si devuelve `{"ok": false, "db": "error"}`, el servidor levantó pero no llega a Supabase →
-   revisar que `DATABASE_URL` sea la del **Session pooler** y que la contraseña esté bien.
-
-   > El plan gratuito de Render duerme el servicio después de ~15 minutos sin tráfico: el primer
-   > request después de eso puede tardar ~50 segundos en responder.
-
-### 3. Frontend — Vercel
-
-1. *Add New → Project* → importar el repositorio.
-2. Configuración:
-   - **Root Directory**: `frontend` ← importante, el frontend no está en la raíz del repo
-   - Framework Preset: **Vite** (se detecta solo), Build Command `npm run build`, Output
-     Directory `dist`
-3. Variables de entorno:
-
-   | Variable | Valor |
-   |---|---|
-   | `VITE_API_URL` | `https://<tu-app>.onrender.com` (**sin barra final**) |
-   | `VITE_CLERK_PUBLISHABLE_KEY` | `pk_...` |
-
-   > ⚠️ Vite incrusta las variables `VITE_*` en el bundle **en tiempo de build**, no las lee en
-   > runtime: si cambiás una, hay que volver a desplegar para que tome efecto.
-
-### 4. Cerrar el círculo del CORS
-
-Volver a Render y setear `FRONTEND_URL` con el dominio de Vercel (sin barra final), por ejemplo
-`https://proyecto-banco.vercel.app`. Render redespliega solo al guardar.
-
-Hasta que esto esté hecho, el front carga pero **todos los fetch fallan por CORS** (ver la lista
-de orígenes permitidos en `backend/app.js`).
-
-> Cada branch/PR en Vercel genera además su propia URL de preview, que **no** está en la lista de
-> orígenes permitidos. Para probar en una preview hay que agregar ese dominio a `FRONTEND_URL`
-> separado por coma, o probar directamente sobre el dominio de producción.
-
-### Checklist post-deploy
-
-- [ ] `/api/health` devuelve `{"ok": true, "db": "ok"}`
-- [ ] Se puede iniciar sesión con Clerk y el onboarding crea la persona en la base
-- [ ] Un depósito y una transferencia impactan en el saldo y aparecen en el historial
-- [ ] El asistente (Calamuchita IA) responde una consulta de saldo con el dato real
-- [ ] Una llamada a la API sin token devuelve `401` (ver
-      [casos de prueba](docs/MANUAL-USUARIO.md#seguridad-los-más-importantes))
-
-### A tener en cuenta
-
-- **Clerk**: las claves `pk_test_` / `sk_test_` son de una *instancia de desarrollo*. Funcionan en
-  Vercel, pero muestran el cartel de "development mode" y tienen tope de usuarios. Para un
-  despliegue "de verdad" hay que crear una instancia de producción en Clerk (claves `pk_live_`) y
-  registrar ahí el dominio de Vercel.
-- **Secretos**: `.env` está en `.gitignore` y no debe commitearse nunca — las claves van
-  únicamente en los paneles de Render y Vercel. Si alguna clave llegó a quedar en un commit,
-  rotarla desde el panel del proveedor.
-- **`DEMO_MODE`**: si el proyecto queda público, conviene activarlo (ver `backend/.env.example`)
-  para que solo los CBU de prueba puedan generar transferencias y préstamos en la red compartida
-  del Banco Central de la cátedra.
-- **Despliegues cruzados**: los dos servicios salen del mismo repositorio, así que por defecto un
-  push que solo toca el frontend igual dispara un redeploy del backend y viceversa. Si molesta, se
-  puede filtrar: en Render con *Settings → Build Filters* (included path `backend/**`) y en Vercel
-  con *Settings → Git → Ignored Build Step*.
-
----
-
-## Datos de ejemplo
-
-Definidos en [`backend/init/02_data.sql`](backend/init/02_data.sql). El volumen es deliberado: son
-la base sobre la que se pueden hacer reportes y análisis reales, no un par de filas para que la
-pantalla no se vea vacía.
-
-| Entidad | Cantidad | Detalle |
-|---|---|---|
-| Clientes | 11 | Edades repartidas entre las 5 franjas del cotizador de seguros |
-| Cuentas | 14 | 11 en ARS y 3 en USD |
-| **Movimientos** | **113** | Repartidos en 9 meses (feb–oct 2026), cubriendo los **17 tipos** de operación |
-| Tarjetas de crédito | 3 | Con 5 consumos y 14 cuotas (algunas pagadas, otras pendientes) |
-| Préstamos | 2 | Uno **pagado en término** y uno en curso, con 18 cuotas en total |
-| Plazos fijos | 4 | Dos ya liquidados y dos activos |
-| Pólizas de seguro | 5 | Cuatro activas y una cancelada |
-| Órdenes de CEDEARs | 6 | Compras y ventas de AAPL y DISN |
-| Reservas de ahorro | 5 | Con monto objetivo y fecha meta |
-| Facturas de servicio | 15 | 12 pendientes (para probar el pago) y 3 ya pagadas |
-
-### Tres decisiones del script que vale la pena conocer
-
-**Los saldos no están escritos a mano.** Se calculan al final como la suma de los movimientos de
-cada cuenta:
-
-```sql
-UPDATE Cuentas_Bancarias c
-SET saldo = COALESCE((SELECT SUM(m.monto) FROM Movimientos m WHERE m.id_cuenta = c.id_cuenta), 0);
-```
-
-Así es **imposible** que el saldo y el historial se contradigan — que es justamente lo que un
-banco no puede permitirse. Verificado: 0 cuentas descuadradas y 0 saldos negativos.
-
-**Juan Pérez tiene un préstamo pagado en término.** Las 6 cuotas se abonaron antes del
-vencimiento, que es el caso que habilita la **bonificación de tasa**. Sin esos datos la feature
-no se podía demostrar.
-
-**Las edades se reparten a propósito.** La prima de los seguros se calcula por franja etaria
-(18-30, 31-45, 46-60, 61-75, 75+); con clientes de un solo rango no se podía probar el cotizador
-completo.
-
-### Algunos clientes de ejemplo
-
-| Cliente | DNI | Perfil |
-|---|---|---|
-| Juan Pérez | 35123456 | El más completo: sueldo, tarjeta con cuotas, préstamo pagado, cuenta en USD, reserva |
-| María García | 28999888 | Plazo fijo liquidado, reserva, pagos de servicios |
-| Ricardo Fort | 20111222 | Cliente premium: montos altos, Mastercard en 6 cuotas, CEDEARs, cuenta en USD |
-| Diego Moyano | 25888777 | Préstamo **activo** con 10 cuotas pendientes |
-| Camila Suárez | 45111999 | Cliente reciente, pocos movimientos (caso borde) |
-| Olga Zalazar | 08999111 | 79 años: franja etaria más alta del cotizador de seguros |
-
----
-
-## Esquema de la base de datos
-
-Definido en [`backend/init/01_schema.sql`](backend/init/01_schema.sql). Son **22 tablas**: 8 del
-núcleo (documentadas en detalle abajo) más las de cada producto financiero.
-
-### Tablas maestras (lookup)
-
-Reemplazan a los `ENUM` para que los valores posibles sean datos y no estructura.
-
-**`Tipos_Producto`** — tipos de producto financiero disponibles.
-
-| Columna | Tipo | Descripción |
-|---|---|---|
-| id_tipo_producto | SERIAL PK | Identificador |
-| nombre | VARCHAR(50) | `CAJA_AHORRO`, `CUENTA_CORRIENTE`, `TARJETA_CREDITO` |
-
-**`Estados_Producto`** — estados posibles de un producto.
-
-| Columna | Tipo | Descripción |
-|---|---|---|
-| id_estado_producto | SERIAL PK | Identificador |
-| nombre | VARCHAR(50) | `ACTIVO`, `BLOQUEADO`, `CERRADO` |
-
-**`Tipos_Movimiento`** — las 17 clases de operación que registra el sistema.
-
-| Columna | Tipo | Descripción |
-|---|---|---|
-| id_tipo_movimiento | SERIAL PK | Identificador |
-| nombre | VARCHAR(50) | `DEBITO`, `CREDITO`, `TRANSFERENCIA_ENVIADA`, `TRANSFERENCIA_RECIBIDA`, `RECARGA`, `PAGO_SERVICIO`, `APORTE_RESERVA`, `RETIRO_RESERVA`, `PAGO_TARJETA`, `PLAZO_FIJO_CONSTITUCION`, `PLAZO_FIJO_LIQUIDACION`, `PRESTAMO_OTORGADO`, `PAGO_PRESTAMO`, `PAGO_SEGURO`, `COMPRA_CEDEAR`, `VENTA_CEDEAR`, `CAMBIO_DIVISA` |
-
-### Entidades principales
-
-**`Personas`** — clientes del banco.
-
-| Columna | Tipo | Restricción |
-|---|---|---|
-| id | SERIAL PK | |
-| nombre | VARCHAR(255) | NOT NULL |
-| apellido | VARCHAR(255) | NOT NULL |
-| dni | VARCHAR(20) | UNIQUE NOT NULL |
-| direccion | VARCHAR(255) | |
-| email | VARCHAR(255) | |
-| telefono | VARCHAR(50) | |
-| fecha_nac | DATE | |
-| clerk_id | VARCHAR(255) | Identificador del usuario en Clerk. **No guardamos contraseñas** |
-
-**`Roles`** — roles que puede tener una persona.
-
-| Columna | Tipo | Descripción |
-|---|---|---|
-| id_rol | SERIAL PK | |
-| nombre_rol | VARCHAR(100) | Ej: `Cliente Premium` |
-| descripcion | VARCHAR(255) | |
-| activo | BOOLEAN | Default `TRUE` |
-| fecha_creacion | TIMESTAMP | Default `CURRENT_TIMESTAMP` |
-
-**`Roles_x_Personas`** — tabla intermedia N:M entre personas y roles.
-
-| Columna | Tipo | FK a |
-|---|---|---|
-| id_persona | INTEGER | `Personas(id)` |
-| id_rol | INTEGER | `Roles(id_rol)` |
-
-**`Productos`** — el contrato entre una persona y un producto financiero.
-
-| Columna | Tipo | FK a |
-|---|---|---|
-| id_producto | SERIAL PK | |
-| id_persona | INTEGER | `Personas(id)` |
-| id_tipo_producto | INTEGER | `Tipos_Producto(id_tipo_producto)` |
-| id_estado_producto | INTEGER | `Estados_Producto(id_estado_producto)` |
-| fecha_alta | TIMESTAMP | Default `CURRENT_TIMESTAMP` |
-
-**`Movimientos`** — el libro mayor: toda operación que entra o sale de una cuenta.
-
-| Columna | Tipo | Descripción |
-|---|---|---|
-| id_movimiento | SERIAL PK | |
-| id_cuenta | INTEGER | FK → `Cuentas_Bancarias` |
-| id_tipo_movimiento | INTEGER | FK → `Tipos_Movimiento` |
-| monto | DECIMAL(15,2) | **Con signo**: negativo sale, positivo entra |
-| fecha_movimiento | TIMESTAMP | Default `CURRENT_TIMESTAMP` |
-| descripcion | VARCHAR(255) | |
-| cbu_origen | VARCHAR(22) | En operaciones locales es el CBU propio |
-| cbu_destino | VARCHAR(22) | En operaciones locales es el CBU propio |
-| id_transaccion_central | VARCHAR(100) | Id de la transacción en el Banco Central. **Índice único parcial**: es lo que impide acreditar dos veces la misma transferencia entrante |
-
-### Productos específicos
-
-**`Cuentas_Bancarias`** — extiende un `Producto` de tipo cuenta (relación 1:1).
-
-| Columna | Tipo | Descripción |
-|---|---|---|
-| id_cuenta | SERIAL PK | |
-| id_producto | INTEGER UNIQUE | FK → `Productos` |
-| cbu | VARCHAR(22) | UNIQUE NOT NULL. Lo asigna el Banco Central |
-| alias | VARCHAR(50) | UNIQUE |
-| moneda | VARCHAR(10) | Default `ARS`. Soporta `USD` |
-| saldo | DECIMAL(15,2) | Default `0.00` |
-
-**`Tarjetas_Credito`** — extiende un `Producto` de tipo tarjeta (relación 1:1).
-
-| Columna | Tipo | Descripción |
-|---|---|---|
-| id_tarjeta | SERIAL PK | |
-| id_producto | INTEGER UNIQUE | FK → `Productos` |
-| numero_tarjeta | VARCHAR(16) | UNIQUE NOT NULL. Generado con dígito verificador de Luhn |
-| marca | VARCHAR(50) | `Visa` o `Mastercard` |
-| fecha_vencimiento | DATE | NOT NULL |
-| limite_compra | DECIMAL(15,2) | NOT NULL |
-| dia_cierre | INTEGER | Entre 1 y 31 |
-
-### Tablas de los productos financieros
-
-| Tabla | Para qué |
-|---|---|
-| `Empresas_Servicio` | Catálogo de empresas (Epec, Ecogas, Fibertel...) |
-| `Servicios_Agendados` | Servicios guardados por el cliente, con monto fijo y débito automático opcionales |
-| `Facturas_Servicio` | Facturas pendientes y pagadas, buscables por número de cliente |
-| `Reservas` | "Bolsillos" de ahorro dentro de una cuenta |
-| `Consumos_Tarjeta` | Cada compra con tarjeta, con su cantidad de cuotas |
-| `Cuotas_Tarjeta` | Una fila por cuota, con vencimiento y estado |
-| `Plazos_Fijos` | Capital, TNA, vencimiento y estado |
-| `Prestamos` | Monto, plazo, TNA y cuota fija |
-| `Cuotas_Prestamo` | Capital e interés de cada cuota, con `fecha_pago` para saber si se pagó **en término** |
-| `Productos_Seguro` | Catálogo (Vida, Hogar, Accidentes Personales) |
-| `Polizas` | Pólizas contratadas, con suma asegurada y prima |
-| `Ordenes_Cedear` | Compras y ventas. **El portafolio se calcula agregando estas órdenes**, no se guarda aparte |
-
-También hay una vista `vista_movimientos_detallados` que junta persona + cuenta + movimiento +
-tipo, útil para reportes.
-
----
-
-## Diagrama de entidad-relación (DER)
-
-El diagrama está en [`files/DER.png`](files/DER.png). Para generarlo o modificarlo podés importar
-el script en **[drawdb.app](https://drawdb.app)**:
-
-1. Abrí [drawdb.app](https://drawdb.app)
-2. Hacé clic en **Import SQL**
-3. Seleccioná el DBMS: **PostgreSQL**
-4. Pegá el contenido de `backend/init/01_schema.sql`
-5. El diagrama se genera automáticamente
-
-### Relaciones clave
-
-```
-Personas ──< Roles_x_Personas >── Roles
-Personas ──< Productos
-Productos >── Tipos_Producto
-Productos >── Estados_Producto
-Productos ──o Cuentas_Bancarias   (1:1)
-Productos ──o Tarjetas_Credito    (1:1)
-Cuentas_Bancarias ──< Movimientos >── Tipos_Movimiento
-Cuentas_Bancarias ──< Reservas, Plazos_Fijos, Prestamos
-Tarjetas_Credito  ──< Consumos_Tarjeta ──< Cuotas_Tarjeta
-Prestamos         ──< Cuotas_Prestamo
-Personas          ──< Polizas, Ordenes_Cedear
-```
-
-**La clave del modelo** es que `Productos` es la tabla central: una persona no tiene "cuentas" y
-"tarjetas" por separado, tiene **productos contratados**, y cada producto se especializa en una
-tabla 1:1. Gracias a eso, abrir una cuenta en dólares fue simplemente un `Producto` más, sin
-tocar el esquema.
-
----
 
 ## Estructura del proyecto
 
@@ -665,8 +342,10 @@ tocar el esquema.
 │
 ├── docs/
 │   ├── DECISIONES.md           # Por qué el sistema está hecho así
+│   ├── MANUAL-USUARIO.md       # Cómo se usa + casos de prueba
 │   ├── API.md                  # Referencia de los 55 endpoints
-│   └── MANUAL-USUARIO.md       # Cómo se usa + casos de prueba
+│   ├── BASE-DE-DATOS.md        # Las 22 tablas, el DER y los datos de ejemplo
+│   └── DESPLIEGUE.md           # Guía de publicación (Supabase/Render/Vercel)
 │
 ├── files/                      # DER, colección de Postman, docs del Banco Central
 ├── README.md
