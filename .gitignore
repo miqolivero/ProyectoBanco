@@ -24,3 +24,7 @@ Thumbs.db
 # Claude Code
 CLAUDE.md
 .claude/
+
+# Migraciones puntuales de datos personales a produccion (DNI, direccion, telefono).
+# Se generan a medida desde la base local y no forman parte del proyecto.
+migracion-*.sql
