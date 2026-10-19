@@ -6,3 +6,23 @@ html, body, #root {
   overflow: hidden;
   background-color: #ffffff;  /* ← esto elimina el negro */
 }
+
+/* 🎯 En escritorio el documento NO scrollea a propósito: la app ocupa exactamente
+   la pantalla y lo que se desplaza es el panel interno (.main-content, las columnas
+   de formulario). Pero en celular los layouts dejan de ser de altura fija y pasan a
+   crecer con el contenido — y ahí este overflow:hidden recortaba todo lo que
+   sobrepasaba el viewport, sin ninguna forma de llegar a lo de abajo.
+   En pantallas angostas devolvemos el scroll al documento, como cualquier página. */
+@media (max-width: 800px) {
+  html, body, #root {
+    height: auto;
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  /* Scroll con inercia en iOS/Android en vez del corte seco. */
+  body {
+    -webkit-overflow-scrolling: touch;
+  }
+}

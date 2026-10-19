@@ -1326,6 +1326,14 @@
     flex-direction: column;
     height: auto;
     min-height: 100vh;
+    min-height: 100dvh; /* descuenta la barra de URL del navegador móvil */
+  }
+
+  /* El shell ya no tiene altura fija, así que .main-content tampoco puede ser un
+     contenedor con scroll propio: sin un padre que lo limite, su overflow-y:auto no
+     scrollea nada y solo sirve para recortar. Acá el que scrollea es el documento. */
+  .main-content {
+    overflow-y: visible;
   }
 
   .sidebar {

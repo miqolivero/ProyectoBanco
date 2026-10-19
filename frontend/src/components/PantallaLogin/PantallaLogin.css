@@ -131,8 +131,15 @@
 
 /* ── RESPONSIVO ── */
 @media (max-width: 768px) {
+  /* Misma corrección que en el onboarding: con altura fija de 100vh y overflow
+     oculto, al abrirse el teclado del celular el área visible se achica y el
+     formulario de Clerk quedaba cortado sin poder scrollear. */
   .login-container {
     flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: visible;
   }
   .login-left-img-col {
     display: none;
@@ -140,6 +147,10 @@
   .login-right-form-col {
     min-width: 100%;
     max-width: 100%;
-    padding: 0 24px;
+    padding: 24px;
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: visible;
   }
 }

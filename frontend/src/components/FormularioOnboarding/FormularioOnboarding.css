@@ -229,8 +229,16 @@
 
 /* RESPONSIVO COMPATIBLE */
 @media (max-width: 768px) {
+  /* Sin esto el formulario quedaba encerrado en una caja de 100vh con overflow
+     oculto: en un celular los últimos campos y el botón de registrarse caían
+     fuera de la pantalla y no había manera de llegar hasta ellos. Soltamos la
+     altura para que el documento crezca y scrollee. */
   .onboarding-container {
     flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: visible;
   }
   .onboarding-left-img-col {
     display: none;
@@ -239,6 +247,8 @@
     min-width: 100%;
     max-width: 100%;
     padding: 30px 20px;
+    height: auto;
+    overflow: visible;
   }
   .form-row {
     flex-direction: column;

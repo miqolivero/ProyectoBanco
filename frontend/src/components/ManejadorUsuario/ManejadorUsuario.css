@@ -2,7 +2,9 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  height: 100vh;
+  /* min-height y no height: si el mensaje de error es largo en una pantalla
+     chica, el contenedor crece en vez de recortarlo. */
+  min-height: 100vh;
   justify-content: center;
   align-items: center;
   background-color: #ffffff;
