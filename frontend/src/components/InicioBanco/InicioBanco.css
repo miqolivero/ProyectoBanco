@@ -16,13 +16,18 @@
 /* SIDEBAR */
 .sidebar {
   width: 260px;
+  flex-shrink: 0;
   background-color: #ffffff;
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   padding: 24px;
   height: 100vh;
-  overflow: hidden;
+  /* 🎯 overflow visible y NO hidden: el popup de perfil es un hijo de la sidebar y mide más
+     que ella (290px contra 212px de ancho útil), así que con overflow:hidden se le cortaba
+     el costado derecho y la parte de arriba. Lo que podía desbordar es el menú, y ese ya
+     scrollea solo con su propio overflow-y (ver .sidebar-menu). */
+  overflow: visible;
 }
 
 .sidebar-brand {
@@ -199,7 +204,12 @@
   border-radius: 16px;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   width: 290px;
-  overflow: hidden;
+  /* Si la ventana es muy baja el popup no se corta contra el borde: scrollea adentro.
+     El overflow-x queda oculto para que el degradé del banner respete los bordes
+     redondeados, pero el vertical tiene que poder desplazarse. */
+  max-height: calc(100vh - 140px);
+  overflow-x: hidden;
+  overflow-y: auto;
   z-index: 999;
   animation: fadeIn 0.2s ease;
 }
@@ -297,20 +307,23 @@
   word-break: break-word;
 }
 
+/* Pie de la sidebar. Antes vivía dentro del popup de perfil y heredaba sus márgenes;
+   ahora es hijo directo de .sidebar, así que ocupa el ancho completo de la columna. */
 .btn-cerrar-sesion {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  width: calc(100% - 40px);
-  margin: 4px 20px 20px 20px;
+  width: 100%;
+  flex-shrink: 0;
+  margin-top: 14px;
   background: #dc2626;
   border: none;
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: 10px;
+  padding: 13px;
   color: white;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 13.5px;
   cursor: pointer;
   box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);
   transition: background-color 0.15s, box-shadow 0.15s;
@@ -319,6 +332,11 @@
 .btn-cerrar-sesion:hover {
   background: #b91c1c;
   box-shadow: 0 4px 10px rgba(220, 38, 38, 0.35);
+}
+
+.btn-cerrar-sesion:active {
+  background: #991b1b;
+  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.3);
 }
 
 @keyframes fadeIn {
@@ -1385,6 +1403,24 @@
   }
 
   .profile-popup-wrapper {
+    margin-top: 12px;
+  }
+
+  /* Acá la sidebar es una barra superior, así que el popup tiene que desplegarse hacia
+     ABAJO: con el bottom del escritorio se abriría por encima del borde de la pantalla. */
+  .profile-popup {
+    bottom: auto;
+    top: calc(100% + 8px);
+    width: min(290px, calc(100vw - 32px));
+    max-height: none;
+  }
+
+  /* Compacto y alineado a la izquierda: un botón rojo a todo el ancho arriba de todo
+     empujaría el contenido hacia abajo y se comería la pantalla. */
+  .btn-cerrar-sesion {
+    width: auto;
+    align-self: flex-start;
+    padding: 10px 18px;
     margin-top: 12px;
   }
 

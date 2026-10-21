@@ -659,9 +659,6 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
                   <span className="profile-popup-valor">{datosUsuario?.direccion || '---'}</span>
                 </div>
               </div>
-              <button onClick={() => signOut()} className="btn-cerrar-sesion">
-                <LogOut size={14} /> Cerrar Sesión
-              </button>
             </div>
           )}
 
@@ -673,6 +670,12 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
             </div>
           </div>
         </div>
+
+        {/* 🎯 Cerrar sesión vive acá y no dentro del popup de perfil: ahí había que adivinar
+            que estaba escondido detrás del nombre. Al pie de la sidebar está siempre a la vista. */}
+        <button onClick={() => signOut()} className="btn-cerrar-sesion">
+          <LogOut size={16} /> Cerrar Sesión
+        </button>
       </aside>
 
       {/* 💻 CONTENIDO DINÁMICO */}
