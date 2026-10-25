@@ -1,22 +1,50 @@
 const pool = require('../config/db');
 
+// Nombre del rol (tabla Roles) que habilita el panel de gerencia.
+const ROL_GERENTE = 'Gerente';
+
 class Persona {
+    // Sin clerk_id: es el identificador interno de autenticación, nadie lo necesita en un listado.
     static async getAll() {
-        const res = await pool.query('SELECT * FROM Personas');
+        const res = await pool.query(
+            `SELECT id, nombre, apellido, dni, direccion, email, telefono, fecha_nac
+             FROM Personas ORDER BY apellido, nombre`
+        );
         return res.rows;
     }
 
     // NUEVO MÉTODO: Para buscar los datos del usuario logueado usando su ID de Clerk
+    // `es_gerente` viaja al frontend solo para decidir si mostrar el menú del panel: es una
+    // pista de interfaz, no un permiso. Lo que protege los datos es requireGerente en el backend.
     static async getByClerkId(clerkId) {
         const query = `
-            SELECT p.*, cb.cbu, cb.alias, cb.saldo 
+            SELECT p.*, cb.cbu, cb.alias, cb.saldo,
+                   EXISTS (
+                       SELECT 1 FROM Roles_x_Personas rp
+                       JOIN Roles r ON r.id_rol = rp.id_rol
+                       WHERE rp.id_persona = p.id AND r.nombre_rol = $2 AND r.activo
+                   ) AS es_gerente
             FROM Personas p
             JOIN Productos prod ON prod.id_persona = p.id
             JOIN Cuentas_Bancarias cb ON cb.id_producto = prod.id_producto
             WHERE p.clerk_id = $1
         `;
-        const res = await pool.query(query, [clerkId]);
+        const res = await pool.query(query, [clerkId, ROL_GERENTE]);
         return res.rows.length > 0 ? res.rows[0] : null;
+    }
+
+    // 🎯 Fuente única de verdad de "¿esta persona puede ver el panel de gerencia?". La usan el
+    // middleware requireGerente y getByClerkId — que el nombre del rol viva en una constante
+    // evita que un lado diga 'Gerente' y el otro 'gerente' y el permiso deje de funcionar.
+    static async esGerente(idPersona) {
+        const res = await pool.query(
+            `SELECT 1 FROM Roles_x_Personas rp
+             JOIN Roles r ON r.id_rol = rp.id_rol
+             WHERE rp.id_persona = $1 AND r.nombre_rol = $2 AND r.activo
+             LIMIT 1`,
+            [idPersona, ROL_GERENTE]
+        );
+        return res.rows.length > 0;
     }
 
     // 🎯 Usada por el middleware de autenticación (middlewares/auth.js): a diferencia de
@@ -42,8 +70,18 @@ class Persona {
         return { ...persona, cbus: resCbus.rows };
     }
 
+    // Antes consultaba "Roles_Personas", una tabla que no existe (la real es Roles_x_Personas):
+    // el endpoint GET /api/personas/:id/roles respondía siempre 500. Además devolvía solo los
+    // ids — ahora trae el nombre del rol, que es lo que sirve.
     static async getRoles(id) {
-        const res = await pool.query('SELECT * FROM Roles_Personas WHERE id_persona = $1', [id]);
+        const res = await pool.query(
+            `SELECT r.id_rol, r.nombre_rol, r.descripcion
+             FROM Roles_x_Personas rp
+             JOIN Roles r ON r.id_rol = rp.id_rol
+             WHERE rp.id_persona = $1
+             ORDER BY r.id_rol`,
+            [id]
+        );
         return res.rows;
     }
 

@@ -64,6 +64,27 @@ async function requireAuth(req, res, next) {
     }
 }
 
+// 🎯 Segundo candado del panel de gerencia: va SIEMPRE después de requireAuth (que es quien
+// deja `req.personaAutenticada`). Estar logueado no alcanza — la persona tiene que tener el rol
+// Gerente en la base. El rol se consulta en cada request en vez de guardarlo en el token, así
+// quitarle el rol a alguien corta su acceso al instante, sin esperar a que venza la sesión.
+// Un cliente común recibe 403: sabe que el recurso existe pero que no es para él.
+async function requireGerente(req, res, next) {
+    if (!req.personaAutenticada) {
+        return res.status(401).json({ error: 'No autenticado.' });
+    }
+    try {
+        const esGerente = await Persona.esGerente(req.personaAutenticada.id);
+        if (!esGerente) {
+            return res.status(403).json({ error: 'Esta sección es exclusiva de la gerencia del banco.' });
+        }
+        next();
+    } catch (error) {
+        console.error('❌ Error verificando el rol de gerente:', error.message);
+        res.status(500).json({ error: 'No se pudo verificar el permiso.' });
+    }
+}
+
 // Confirma que `cbu` sea una cuenta real de la persona autenticada (en cualquier moneda).
 // Devuelve true/false y responde el 403 por su cuenta — así el controller solo hace:
 //   if (!exigirCbuPropio(req, res, cbu)) return;
@@ -105,4 +126,4 @@ function obtenerUserIdSesion(req) {
     }
 }
 
-module.exports = { clerkAttach, requireAuth, exigirCbuPropio, exigirPersonaPropia, obtenerUserIdSesion };
+module.exports = { clerkAttach, requireAuth, requireGerente, exigirCbuPropio, exigirPersonaPropia, obtenerUserIdSesion };

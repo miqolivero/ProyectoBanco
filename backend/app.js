@@ -45,6 +45,7 @@ const prestamoRoutes = require('./routes/prestamoRoutes');
 const seguroRoutes = require('./routes/seguroRoutes');
 const cedearRoutes = require('./routes/cedearRoutes');
 const asistenteRoutes = require('./routes/asistenteRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 const { centralBankFetch } = require('./config/centralBank');
 const { clerkAttach } = require('./middlewares/auth');
 const pool = require('./config/db');
@@ -112,6 +113,7 @@ app.use('/api/prestamos', prestamoRoutes);
 app.use('/api/seguros', seguroRoutes);
 app.use('/api/cedears', cedearRoutes);
 app.use('/api/asistente', asistenteRoutes);
+app.use('/api/admin', adminRoutes);
 
 // --- 9. MANEJO DE ERRORES BÁSICO ---
 app.use((err, req, res, next) => {

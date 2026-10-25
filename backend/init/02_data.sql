@@ -26,10 +26,14 @@ BEGIN
 END $$;
 
 -- 1. ROLES
+-- 'Gerente' habilita el panel de gerencia (ver middlewares/auth.js → requireGerente). Ningún
+-- cliente de ejemplo lo tiene: se asigna a mano a la cuenta real del gerente, porque los
+-- clientes de ejemplo no tienen login (clerk_id vacío) y no podrían entrar igual.
 INSERT INTO Roles (id_rol, nombre_rol, descripcion) VALUES
 (1, 'Cliente Premium', 'Usuarios con beneficios y límites altos'),
 (2, 'Cliente Regular', 'Usuarios estándar del banco'),
-(3, 'Empleado', 'Personal administrativo del banco');
+(3, 'Empleado', 'Personal administrativo del banco'),
+(4, 'Gerente', 'Acceso al panel de gerencia con la información general del banco');
 
 -- 2. CLIENTES (11) — edades repartidas a propósito: la prima de los seguros se
 -- calcula por franja etaria (18-30, 31-45, 46-60, 61-75, 75+), así que con un solo rango no se
