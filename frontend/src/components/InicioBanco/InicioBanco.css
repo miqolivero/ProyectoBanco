@@ -103,6 +103,21 @@
   font-weight: 800;
 }
 
+/* Panel de gerencia: marcado con el verde institucional para que se distinga de las
+   operaciones de cliente — es otra clase de pantalla, no una más del home banking. */
+.menu-item-gerente {
+  color: #0f3424;
+  font-weight: 700;
+  border: 1px solid #c6ecd5;
+  background-color: #f6fcf8;
+}
+
+.menu-item-gerente.active, .menu-item-gerente:hover:not(.disabled) {
+  background-color: #0f3424;
+  color: #ffffff;
+  border-color: #0f3424;
+}
+
 /* Grupos colapsables (Movimientos / Inversiones / Crédito) */
 .menu-group {
   display: flex;

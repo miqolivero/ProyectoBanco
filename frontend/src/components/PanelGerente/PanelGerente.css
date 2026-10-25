@@ -1,0 +1,771 @@
+/* ===================================================================
+   PANEL DE GERENCIA
+   Prefijo gerente- en todas las clases: Vite no aísla el CSS por
+   componente, así que un nombre genérico (.kpi, .tabla) chocaría con
+   el de otra pantalla.
+   =================================================================== */
+
+.gerente-container {
+  padding: 12px 0;
+  max-width: 1180px;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.gerente-cargando {
+  color: #6b7280;
+  padding: 40px 0;
+}
+
+/* ── Encabezado ── */
+.gerente-header-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.gerente-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #0f3424;
+  background: #eefdf4;
+  border: 1px solid #c6ecd5;
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-bottom: 10px;
+}
+
+.gerente-header-box h2 {
+  font-size: 24px;
+  color: #111827;
+  margin: 0 0 4px 0;
+}
+
+.gerente-header-box p {
+  color: #1a5c3f;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  background: linear-gradient(90deg, #eefdf4, rgba(238, 253, 244, 0));
+  border-left: 3px solid #2e7d4f;
+  padding: 8px 14px;
+  border-radius: 0 8px 8px 0;
+  margin: 0;
+}
+
+.gerente-btn-secundario {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  color: #1e5238;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 9px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.gerente-btn-secundario:hover:not(:disabled) {
+  background: #eefdf4;
+  border-color: #2e7d4f;
+}
+
+.gerente-btn-secundario:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.gerente-girando {
+  animation: gerente-girar 0.9s linear infinite;
+}
+
+@keyframes gerente-girar {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Pestañas ── */
+.gerente-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 20px;
+  overflow-x: auto;
+}
+
+.gerente-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 10px 16px;
+  margin-bottom: -1px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.gerente-tab:hover {
+  color: #1e5238;
+}
+
+.gerente-tab.activa {
+  color: #0f3424;
+  border-bottom-color: #2e7d4f;
+}
+
+/* ── KPIs ── */
+.gerente-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.gerente-kpi {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+}
+
+.gerente-kpi-icono {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: #eefdf4;
+  color: #1e5238;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.gerente-kpi-titulo {
+  font-size: 12.5px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.gerente-kpi-valor {
+  font-size: 23px;
+  color: #111827;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.gerente-kpi-detalle {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* ── Alertas ── */
+.gerente-alertas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.gerente-alerta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  border: 1px solid;
+}
+
+.gerente-alerta div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gerente-alerta strong {
+  font-size: 14.5px;
+}
+
+.gerente-alerta span {
+  font-size: 12.5px;
+  opacity: 0.85;
+}
+
+.gerente-alerta.verde {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.gerente-alerta.roja {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+/* ── Tarjetas ── */
+.gerente-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 22px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+  margin-bottom: 16px;
+  min-width: 0; /* deja que las tablas scrolleen adentro en vez de estirar la grilla */
+}
+
+.gerente-card-alerta {
+  border-color: #fecaca;
+}
+
+.gerente-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.gerente-card-header h3 {
+  font-size: 15.5px;
+  color: #111827;
+  margin: 0;
+}
+
+.gerente-card-header span {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.gerente-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.gerente-grid-2 .gerente-card {
+  margin-bottom: 16px;
+}
+
+.gerente-vacio {
+  color: #6b7280;
+  font-size: 13.5px;
+  text-align: center;
+  padding: 18px 0;
+}
+
+/* ── Fondos de clientes: barra de composición ── */
+.gerente-total {
+  display: block;
+  font-size: 26px;
+  color: #0f3424;
+  margin-bottom: 14px;
+  letter-spacing: -0.01em;
+}
+
+.gerente-composicion {
+  display: flex;
+  height: 14px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #f3f4f6;
+  margin-bottom: 16px;
+}
+
+.gerente-seg {
+  height: 100%;
+  transition: width 0.5s ease;
+}
+
+.gerente-seg.disponible, .gerente-leyenda i.disponible { background: #1e5238; }
+.gerente-seg.reservas,   .gerente-leyenda i.reservas   { background: #4caf7d; }
+.gerente-seg.plazos,     .gerente-leyenda i.plazos     { background: #a7dcbc; }
+
+.gerente-leyenda {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  font-size: 13px;
+  color: #374151;
+}
+
+.gerente-leyenda li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gerente-leyenda li b {
+  margin-left: auto;
+  color: #111827;
+}
+
+.gerente-leyenda i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.gerente-leyenda.horizontal {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 12px;
+  font-size: 12.5px;
+}
+
+.gerente-leyenda i.ingreso { background: #2e7d4f; }
+.gerente-leyenda i.egreso  { background: #f87171; }
+
+.gerente-nota {
+  color: #9ca3af;
+  margin-left: auto;
+}
+
+/* ── Cartera de crédito: filas clave/valor ── */
+.gerente-filas {
+  display: flex;
+  flex-direction: column;
+}
+
+.gerente-filas div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 13px;
+}
+
+.gerente-filas div:last-child {
+  border-bottom: none;
+}
+
+.gerente-filas span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #4b5563;
+}
+
+.gerente-filas b {
+  color: #111827;
+  text-align: right;
+}
+
+/* ── Gráfico mensual ──
+   Las columnas se reparten el ancho disponible (flex: 1) con un tope, así con pocos meses
+   no quedan barras gordísimas ni un hueco enorme al costado. */
+.gerente-chart {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 10px;
+  height: 210px;
+  padding-top: 8px;
+}
+
+.gerente-chart-col {
+  flex: 1 1 0;
+  max-width: 78px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.gerente-chart-barras {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.gerente-barra {
+  width: 42%;
+  max-width: 22px;
+  min-height: 2px;
+  border-radius: 4px 4px 0 0;
+  transition: height 0.5s ease;
+}
+
+.gerente-barra.ingreso { background: #2e7d4f; }
+.gerente-barra.egreso  { background: #f87171; }
+
+.gerente-chart-mes {
+  font-size: 11.5px;
+  color: #374151;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.gerente-chart-cant {
+  font-size: 10.5px;
+  color: #9ca3af;
+}
+
+/* ── Ranking de operaciones ── */
+.gerente-ranking {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.gerente-ranking-texto {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+.gerente-ranking-pista {
+  height: 7px;
+  background: #f3f4f6;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.gerente-ranking-barra {
+  height: 100%;
+  background: linear-gradient(90deg, #1e5238, #4caf7d);
+  border-radius: 999px;
+  transition: width 0.5s ease;
+}
+
+/* ── Top clientes ── */
+.gerente-top {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.gerente-top li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 13.5px;
+}
+
+.gerente-top li:last-child {
+  border-bottom: none;
+}
+
+.gerente-top-pos {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #eefdf4;
+  color: #1e5238;
+  font-weight: 700;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.gerente-top-nombre {
+  flex: 1;
+  color: #111827;
+  text-transform: capitalize;
+}
+
+/* ── Tablas ── */
+.gerente-tabla-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.gerente-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.gerente-tabla th {
+  text-align: left;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #6b7280;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+  background: #f9fafb;
+}
+
+.gerente-tabla td {
+  padding: 11px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+  vertical-align: middle;
+}
+
+.gerente-tabla tbody tr:hover {
+  background: #fafdfb;
+}
+
+.gerente-tabla small {
+  display: block;
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.gerente-banco {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.gerente-banco small {
+  flex-basis: 100%;
+  font-weight: 400;
+  margin-top: 0;
+}
+
+.gerente-dir {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: 600;
+}
+
+.gerente-dir.salida  { color: #b91c1c; }
+.gerente-dir.entrada { color: #15803d; }
+
+.gerente-negativo {
+  color: #b91c1c;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.gerente-positivo {
+  color: #15803d;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.gerente-dias {
+  display: inline-block;
+  background: #fef2f2;
+  color: #991b1b;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.gerente-mono {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 12px;
+}
+
+.gerente-fecha {
+  white-space: nowrap;
+  color: #6b7280;
+}
+
+.gerente-descripcion {
+  max-width: 340px;
+  color: #6b7280;
+}
+
+.gerente-red {
+  display: inline-block !important;
+  background: #eff6ff;
+  color: #1d4ed8 !important;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 999px;
+  margin-top: 3px !important;
+}
+
+/* ── Clientes ── */
+.gerente-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.gerente-buscador {
+  flex: 1;
+  min-width: 220px;
+  max-width: 380px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0 12px;
+  color: #9ca3af;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.gerente-buscador:focus-within {
+  border-color: #2e7d4f;
+  box-shadow: 0 0 0 3px rgba(46, 125, 79, 0.12);
+}
+
+.gerente-buscador input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 10px 0;
+  font-size: 13.5px;
+  background: transparent;
+  color: #111827;
+}
+
+.gerente-cliente {
+  font-weight: 600;
+  color: #111827;
+  text-transform: capitalize;
+}
+
+.gerente-rol {
+  display: inline-block !important;
+  background: #0f3424;
+  color: #ffffff !important;
+  font-weight: 600;
+  text-transform: none;
+  padding: 1px 8px;
+  border-radius: 999px;
+  margin-top: 4px !important;
+}
+
+.gerente-contacto {
+  max-width: 220px;
+  word-break: break-word;
+}
+
+.gerente-productos span {
+  display: block;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.gerente-acceso {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.gerente-acceso.si { background: #dcfce7; color: #166534; }
+.gerente-acceso.no { background: #f3f4f6; color: #6b7280; }
+
+/* ── Error ── */
+.gerente-error {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  padding: 20px;
+  border-radius: 12px;
+}
+
+.gerente-error div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+/* ===================================================================
+   RESPONSIVE
+   =================================================================== */
+@media (max-width: 1100px) {
+  .gerente-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .gerente-grid-2,
+  .gerente-alertas {
+    grid-template-columns: 1fr;
+  }
+
+  .gerente-nota {
+    margin-left: 0;
+    flex-basis: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .gerente-header-box {
+    flex-direction: column;
+  }
+
+  .gerente-kpis {
+    gap: 10px;
+  }
+
+  .gerente-kpi {
+    padding: 14px;
+  }
+
+  .gerente-kpi-valor {
+    font-size: 19px;
+  }
+
+  .gerente-card {
+    padding: 16px;
+  }
+
+  /* En celular 12 meses no entran parejos: el gráfico scrollea de costado en vez de
+     aplastar las columnas hasta volverlas ilegibles. */
+  .gerente-chart {
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .gerente-chart-col {
+    flex: 0 0 44px;
+  }
+
+  .gerente-buscador {
+    max-width: none;
+  }
+}

@@ -5,7 +5,7 @@ import {
   Home, ArrowLeftRight, Receipt, CreditCard,
   TrendingUp, TrendingDown, Landmark, BarChart3, History, Settings, User, LogOut,
   Eye, EyeOff, Pencil, Check, X, DollarSign, Send, Download, Briefcase, Plus,
-  ChevronDown, ChevronRight, Layers, CalendarRange, Hash, Bot
+  ChevronDown, ChevronRight, Layers, CalendarRange, Hash, Bot, ShieldCheck
 } from 'lucide-react';
 import logo from "../../assets/LogoMinimalista.png";
 import Transferencias from '../Transferencia/Transferencias';
@@ -23,6 +23,7 @@ import Ajustes from '../Ajustes/Ajustes';
 import SelectorCuenta from '../SelectorCuenta/SelectorCuenta';
 import ComprobanteMovimiento from '../ComprobanteMovimiento/ComprobanteMovimiento';
 import Asistente from '../Asistente/Asistente';
+import PanelGerente from '../PanelGerente/PanelGerente';
 import './InicioBanco.css';
 import { API_URL } from '../../config/api';
 
@@ -532,6 +533,15 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
             <Home size={18} /> Inicio
           </button>
 
+          {/* 🎯 Solo se muestra a quien tiene el rol Gerente. Ocultarlo es una cortesía de interfaz,
+              no la seguridad: aunque alguien fuerce la vista, el backend responde 403 a
+              /api/admin/* si la sesión no es de un gerente (ver requireGerente). */}
+          {datosUsuario?.es_gerente && (
+            <button className={`menu-item menu-item-gerente ${vistaActual === 'gerente' ? 'active' : ''}`} onClick={() => setVistaActual('gerente')}>
+              <ShieldCheck size={18} /> Panel Gerencia
+            </button>
+          )}
+
           <div className="menu-group">
             <button
               className={`menu-group-header ${grupoDeVista(vistaActual) === 'movimientos' ? 'active' : ''}`}
@@ -971,6 +981,10 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
         {/* 3.12.5. VISTA ASISTENTE IA — sin props: se autentica solo con el token de Clerk que
             ya manda el fetch parcheado (ver config/api.js), no hace falta pasarle datosUsuario. */}
         {vistaActual === 'asistente' && <Asistente />}
+
+        {/* 3.12.6. PANEL DE GERENCIA — sin props por la misma razón que el asistente: el backend
+            identifica a la persona por el token, y es él quien decide si puede ver los datos. */}
+        {vistaActual === 'gerente' && datosUsuario?.es_gerente && <PanelGerente />}
 
         {/* 3.13. VISTA AJUSTES DE PERFIL */}
         {vistaActual === 'ajustes' && (
