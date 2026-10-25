@@ -104,7 +104,7 @@
           }
         },
         {
-          "name": "Listar personas (con joins)",
+          "name": "Listar todas las personas - SOLO GERENCIA (403 para clientes)",
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/personas"
@@ -935,6 +935,33 @@
                 }
               }
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. Panel de gerencia",
+      "description": "Datos de TODO el banco. Exigen sesion Y el rol Gerente: con el token de un cliente comun responden 403. El rol se verifica en la base en cada request.",
+      "item": [
+        {
+          "name": "Resumen: indicadores, mora, actividad, interoperabilidad e integridad",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/resumen"
+          }
+        },
+        {
+          "name": "Cartera de clientes con saldos y productos",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/clientes"
+          }
+        },
+        {
+          "name": "Ultimos movimientos del banco (limite 1 a 100)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/movimientos?limite=15"
           }
         }
       ]

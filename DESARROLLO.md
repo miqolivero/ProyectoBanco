@@ -359,7 +359,7 @@ desplegar cada uno por su cuenta.
 
 ## 📡 Endpoints principales
 
-La referencia completa de los 55 endpoints está en [docs/API.md](docs/API.md). Estos son los del
+La referencia completa de los 58 endpoints está en [docs/API.md](docs/API.md). Estos son los del
 núcleo del sistema:
 
 | Método | Endpoint | Descripción | Componente frontend |

@@ -137,6 +137,23 @@ un parámetro de identidad — la cuenta consultada sale siempre de la sesión v
 forma de que una pregunta apunte a la cuenta de otra persona, ni de que el asistente mueva
 dinero.
 
+### Panel de gerencia
+
+Una vista exclusiva para quien tiene el rol `Gerente`, con la foto del banco entero:
+
+- **Indicadores**: clientes, cuentas y depósitos por moneda, y dónde está la plata de los clientes
+  (disponible, en reservas o en plazos fijos).
+- **Cartera de crédito y mora**: capital prestado pendiente de cobro, y qué clientes tienen cuotas
+  de préstamo o tarjeta vencidas e impagas, con los días de atraso.
+- **Actividad**: ingresos y egresos de los últimos 12 meses, y las operaciones más usadas.
+- **Interoperabilidad**: transferencias enviadas y recibidas con cada banco de la red de la cátedra.
+- **Control de integridad**: avisa si alguna cuenta tiene un saldo que no coincide con la suma de
+  sus movimientos.
+- **Cartera de clientes** con búsqueda y exportación a Excel, y los últimos movimientos del banco.
+
+El menú solo aparece para el gerente, pero eso es cortesía de interfaz: el permiso real lo
+verifica el backend en cada request, y un cliente común que llame a `/api/admin/*` recibe `403`.
+
 ---
 
 ## Decisiones técnicas destacadas
@@ -197,8 +214,8 @@ demás vive en documentos propios, para que cada uno se pueda leer sin leer el r
 | Documento | Qué contiene | Para quién |
 |---|---|---|
 | **[docs/DECISIONES.md](docs/DECISIONES.md)** | Por qué el sistema está hecho así: decisiones de negocio y técnicas, riesgos identificados y cómo se mitigaron, y lo que se decidió no hacer | Quien evalúa o va a modificar el proyecto |
-| **[docs/MANUAL-USUARIO.md](docs/MANUAL-USUARIO.md)** | Cómo se usa cada pantalla, sin tecnicismos, con **43 casos de prueba documentados** y glosario | Quien usa el sistema |
-| **[docs/API.md](docs/API.md)** | Referencia de los 55 endpoints: parámetros, respuestas y errores | Quien integra o prueba la API |
+| **[docs/MANUAL-USUARIO.md](docs/MANUAL-USUARIO.md)** | Cómo se usa cada pantalla, sin tecnicismos, con **46 casos de prueba documentados** y glosario | Quien usa el sistema |
+| **[docs/API.md](docs/API.md)** | Referencia de los 58 endpoints: parámetros, respuestas y errores | Quien integra o prueba la API |
 | **[docs/BASE-DE-DATOS.md](docs/BASE-DE-DATOS.md)** | Las 22 tablas columna por columna, el DER y los datos de ejemplo | Quien consulta o modifica el modelo de datos |
 | **[docs/DESPLIEGUE.md](docs/DESPLIEGUE.md)** | Guía paso a paso para publicar en Supabase, Render y Vercel | Quien pone el sistema en línea |
 | **[DESARROLLO.md](DESARROLLO.md)** | Bitácora fase por fase: qué se construyó, qué se rompió y cómo se resolvió | Quien quiere seguir el proceso |
@@ -343,7 +360,7 @@ usar el *Session pooler* de Supabase y no la conexión directa.
 ├── docs/
 │   ├── DECISIONES.md           # Por qué el sistema está hecho así
 │   ├── MANUAL-USUARIO.md       # Cómo se usa + casos de prueba
-│   ├── API.md                  # Referencia de los 55 endpoints
+│   ├── API.md                  # Referencia de los 58 endpoints
 │   ├── BASE-DE-DATOS.md        # Las 22 tablas, el DER y los datos de ejemplo
 │   └── DESPLIEGUE.md           # Guía de publicación (Supabase/Render/Vercel)
 │
@@ -361,7 +378,7 @@ La referencia completa está en **[docs/API.md](docs/API.md)**.
 ### Con la colección de Postman
 
 El repositorio incluye [`files/postman.collection.json`](files/postman.collection.json), con los
-**55 endpoints** agrupados en carpetas por recurso. Para usarla: *Import → Upload Files* y
+**58 endpoints** agrupados en carpetas por recurso. Para usarla: *Import → Upload Files* y
 seleccionar el archivo.
 
 La colección ya trae sus propias variables, así que no hay que armar nada a mano:

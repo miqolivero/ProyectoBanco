@@ -1,11 +1,11 @@
 # Referencia de la API
 
-API REST del backend de Calamuchita Bank. **55 endpoints** agrupados por recurso.
+API REST del backend de Calamuchita Bank. **58 endpoints** agrupados por recurso.
 
 - **URL base en desarrollo:** `http://localhost:3001`
 - **Formato:** JSON en request y response (`Content-Type: application/json`)
 - **Colección de Postman:** [`files/postman.collection.json`](../files/postman.collection.json) —
-  los 55 endpoints en carpetas, con el token de Clerk ya configurado como variable de colección
+  los 58 endpoints en carpetas, con el token de Clerk ya configurado como variable de colección
   (ver [README → Probar la API](../README.md#con-la-colección-de-postman))
 
 ---
@@ -25,6 +25,7 @@ API REST del backend de Calamuchita Bank. **55 endpoints** agrupados por recurso
 11. [Inversiones en CEDEARs](#11-inversiones-en-cedears) — `/api/cedears`
 12. [Asistente con IA](#12-asistente-con-ia) — `/api/asistente`
 13. [Health check](#13-health-check)
+14. [Panel de gerencia](#14-panel-de-gerencia) — `/api/admin`
 
 ---
 
@@ -101,13 +102,16 @@ Los errores siempre devuelven `{ "error": "mensaje explicativo" }`.
 
 Base: `/api/personas`
 
+En la columna **Auth** de todas las tablas: ✅ exige sesión, 🛡️ exige sesión **y** el rol
+`Gerente`, — es público.
+
 | Método | Ruta | Auth | Descripción |
 |---|---|:--:|---|
-| `GET` | `/` | ✅ | Lista de personas con su cuenta principal |
+| `GET` | `/` | 🛡️ | Lista de todas las personas. **Solo gerencia** (ver [§14](#14-panel-de-gerencia)) |
 | `POST` | `/` | — | **Registro**: crea persona + producto + cuenta en ARS |
 | `GET` | `/clerk/:clerkId` | — | Busca una persona por su id de Clerk |
 | `GET` | `/verificar/:clerkId` | — | Indica si el usuario de Clerk ya completó el onboarding |
-| `GET` | `/:id/roles` | ✅ | Roles asignados a la persona |
+| `GET` | `/:id/roles` | ✅ | Roles asignados a la persona (id, nombre y descripción) |
 | `GET` | `/:id/productos` | ✅ | Productos contratados por la persona |
 | `GET` | `/:id/cuenta-usd` | ✅ | Devuelve la cuenta en USD, si la tiene |
 | `POST` | `/:id/cuenta-usd` | ✅ | Abre una caja de ahorro en USD |
@@ -518,6 +522,62 @@ Devuelve `503` si falta `GEMINI_API_KEY`.
 
 Devuelve `503` con `{ "ok": false, "db": "error" }` si el servidor está arriba pero no llega a la
 base. Es lo primero que conviene mirar cuando algo no funciona después de desplegar.
+
+---
+
+## 14. Panel de gerencia
+
+Base: `/api/admin`. **Todos exigen sesión 🛡️ y el rol `Gerente`.**
+
+Es el único grupo de endpoints que devuelve datos de **todo el banco** en vez de los del titular
+de la sesión, así que lleva un segundo candado: después de `requireAuth`, el middleware
+`requireGerente` verifica en la base que la persona tenga el rol `Gerente` activo. Un cliente
+común con un token válido recibe `403`.
+
+El rol se consulta **en cada request**, no se guarda en el token: quitárselo a alguien corta su
+acceso en la request siguiente, sin esperar a que venza la sesión.
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/resumen` | Todo el tablero en una respuesta: indicadores, mora, actividad mensual, operaciones por tipo, transferencias por banco, top de clientes y control de integridad |
+| `GET` | `/clientes` | Cartera de clientes con saldos por moneda, productos, roles y si tienen acceso a la app |
+| `GET` | `/movimientos?limite=15` | Últimos movimientos de todo el banco. `limite` se acota a 1–100 |
+
+### `GET /resumen`
+
+```json
+{
+  "indicadores": {
+    "clientes": "12", "clientes_con_acceso": "1",
+    "cuentas_ars": "12", "cuentas_usd": "4",
+    "saldo_ars": "14610547.87", "saldo_usd": "6150.00",
+    "reservas_ars": "960001.00", "plazos_fijos_ars": "2377500.00",
+    "prestamos_activos": "4", "capital_prestado_pendiente": "1108403.18",
+    "movimientos_total": "188", "movimientos_30d": "12"
+  },
+  "mora": [{ "nombre": "Ricardo", "apellido": "Fort", "cuotas": "3", "monto": "300000.00", "dias_max_atraso": 58 }],
+  "actividadMensual": [{ "mes": "2026-09", "cantidad": "62", "ingresos": "23077479.97", "egresos": "18792356.10" }],
+  "transferenciasPorBanco": [{ "codigo": "009", "banco": "Obsidian Bank", "enviadas": "7", "recibidas": "3" }],
+  "cuentasDescuadradas": [],
+  "generadoEn": "2026-10-25T14:30:00.000Z"
+}
+```
+
+*(Recortado: cada sección trae más campos.)*
+
+Tres criterios de diseño:
+
+- **Los números llegan como texto.** `count` y `sum` de Postgres son `bigint`/`numeric`, y `pg` los
+  devuelve como string para no perder precisión. El frontend los convierte al mostrarlos.
+- **Pesos y dólares no se suman nunca.** Los saldos se reportan por moneda, y los volúmenes
+  (actividad mensual, operaciones, transferencias) se calculan solo sobre cuentas en pesos.
+- **`cuentasDescuadradas` debería estar vacío.** Lista las cuentas cuyo saldo no coincide con la
+  suma de sus movimientos: es la regla central del modelo de datos convertida en un control
+  visible. Si aparece algo, hay plata que ningún movimiento explica.
+
+`transferenciasPorBanco` agrupa por los 3 primeros dígitos del CBU de la contraparte y traduce el
+código con la lista de bancos que el backend descarga del Banco Central al arrancar. El código
+`004` es Calamuchita Bank (transferencias entre clientes propios).
 
 ---
 

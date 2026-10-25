@@ -19,8 +19,9 @@ así, en [DECISIONES.md](DECISIONES.md).
 6. [Pagar servicios y recargar el celular](#6-pagar-servicios-y-recargar-el-celular)
 7. [El historial y los reportes](#7-el-historial-y-los-reportes)
 8. [Los productos financieros](#8-los-productos-financieros)
-9. [Casos de prueba y manejo de errores](#9-casos-de-prueba-y-manejo-de-errores)
-10. [Glosario](#10-glosario)
+9. [El panel de gerencia](#9-el-panel-de-gerencia)
+10. [Casos de prueba y manejo de errores](#10-casos-de-prueba-y-manejo-de-errores)
+11. [Glosario](#11-glosario)
 
 ---
 
@@ -406,7 +407,61 @@ Ejemplos de preguntas que entiende:
 
 ---
 
-## 9. Casos de prueba y manejo de errores
+## 9. El panel de gerencia
+
+Una pantalla para el gerente del banco, con la información de **todo el banco** y no de una cuenta
+en particular. Solo la ve quien tiene el rol de Gerente: en el menú lateral aparece como
+**Panel Gerencia**, justo debajo de Inicio, resaltado en verde. Un cliente común no ve ese botón.
+
+> **Cómo se le da el rol a alguien:** no hay una pantalla para eso a propósito — dar acceso a los
+> datos de todos los clientes es una decisión que no debería poder tomarse con un clic. Se asigna
+> desde la base de datos (ver [DESPLIEGUE.md](DESPLIEGUE.md#5-dar-el-rol-de-gerente)).
+
+El panel tiene tres pestañas.
+
+### Resumen
+
+Arriba, cuatro números: cuántos **clientes** tiene el banco (y cuántos usan la app), cuánta
+plata hay **depositada en pesos** y **en dólares**, y cuántos **movimientos** hubo.
+
+Debajo, dos avisos que conviene mirar primero:
+
+- **Mora.** En rojo si hay clientes con cuotas de préstamo o de tarjeta **vencidas y sin pagar**,
+  con el monto total adeudado. En verde si todos están al día.
+- **Integridad de los saldos.** En verde dice *"Saldos íntegros"*: cada saldo coincide con la suma
+  de sus movimientos. Si aparece en rojo, hay una cuenta con plata que ningún movimiento explica,
+  y abajo se lista cuál y por cuánto. En un banco que funciona bien, este aviso siempre está verde.
+
+Y el resto del tablero:
+
+| Bloque | Qué muestra |
+|---|---|
+| **Fondos de los clientes** | Dónde está la plata en pesos: disponible en las cuentas, apartada en reservas o invertida en plazos fijos |
+| **Cartera de crédito** | Préstamos activos, cuánto falta cobrar, tarjetas emitidas, pólizas activas |
+| **Actividad mensual** | Barras de ingresos (verde) y egresos (rojo) de los últimos 12 meses, en pesos |
+| **Operaciones más usadas** | Qué hacen más los clientes: depósitos, transferencias, pagos… |
+| **Clientes con mayor saldo** | Los cinco con más dinero en pesos |
+| **Interoperabilidad con la red** | Cuántas transferencias se enviaron y recibieron con **cada banco de la red** de la cátedra |
+| **Detalle de mora** | Solo si hay mora: quién debe, desde hace cuántos días, y si es de préstamo o tarjeta |
+
+### Clientes
+
+La lista completa, con DNI, contacto, cuentas, saldo en cada moneda y productos. Se puede
+**buscar** por nombre, DNI o email, y **exportar a Excel** lo que se esté viendo.
+
+La columna **App** dice si el cliente tiene usuario para entrar al home banking. Los clientes de
+ejemplo dicen *"Sin acceso"*: existen en el banco, pero nadie inicia sesión con ellos.
+
+### Movimientos
+
+Los 50 movimientos más recientes de todo el banco, con el cliente al que pertenece cada uno. Los
+que pasaron por el Banco Central llevan la etiqueta azul **Red BCRA**.
+
+**Actualizar** (arriba a la derecha) vuelve a cargar todo con los datos del momento.
+
+---
+
+## 10. Casos de prueba y manejo de errores
 
 Esta sección documenta **qué tiene que pasar** en cada situación, incluyendo los errores. Sirve
 para verificar que el sistema funciona y como descripción de los procesos de negocio.
@@ -477,6 +532,14 @@ para verificar que el sistema funciona y como descripción de los procesos de ne
 > El caso 43 es el más importante de todos para un banco: significa que el saldo no es un número
 > suelto, sino la consecuencia verificable de las operaciones registradas.
 
+### Panel de gerencia
+
+| # | Qué se prueba | Cómo | Resultado esperado |
+|---|---|---|---|
+| 44 | **Un cliente intenta ver el panel** | Con la sesión de un cliente común (sin el rol), llamar a `GET /api/admin/resumen` | `403` *"Esta sección es exclusiva de la gerencia del banco"*. **No devuelve datos.** Tampoco le aparece el botón en el menú |
+| 45 | **Listar a todos los clientes** | Con la sesión de un cliente común, llamar a `GET /api/personas` | `403`. La lista completa de personas es un dato de gerencia |
+| 46 | **Quitarle el rol al gerente** | Con el panel abierto, borrar su fila de `Roles_x_Personas` y tocar **Actualizar** | El panel muestra *"Tu cuenta no tiene permisos de gerencia"*. El acceso se corta **en la request siguiente**, sin esperar a que venza la sesión |
+
 ### Problemas conocidos
 
 Cosas que funcionan distinto de lo que se podría esperar:
@@ -491,7 +554,7 @@ Cosas que funcionan distinto de lo que se podría esperar:
 
 ---
 
-## 10. Glosario
+## 11. Glosario
 
 | Término | Qué significa |
 |---|---|

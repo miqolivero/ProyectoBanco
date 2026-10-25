@@ -183,6 +183,34 @@ Es el ejemplo exacto del riesgo que la consigna plantea como "¿qué pasa si alg
 acceder a datos que no son suyos?", y la razón por la que la autorización tiene que estar en
 **cada** operación y no solo en el login.
 
+### Un segundo candado para la gerencia
+
+Todo lo anterior responde a *"¿esta cuenta es tuya?"*. El panel de gerencia rompe ese modelo a
+propósito: muestra datos de **todos** los clientes, así que la pregunta pasa a ser *"¿tenés
+permiso para ver el banco entero?"*. Para eso se agregó el middleware `requireGerente`, que corre
+después de `requireAuth` y verifica que la persona tenga el rol `Gerente` en la base.
+
+- **El rol vive en la base, no en el token.** El esquema ya tenía `Roles` y `Roles_x_Personas`
+  desde el primer cuatrimestre, así que se usó eso en vez de inventar una lista de administradores
+  en una variable de entorno. Y se consulta en cada request: quitarle el rol a alguien corta el
+  acceso en la request siguiente, sin esperar a que venza su sesión de Clerk.
+- **Se aplica al router entero.** `adminRoutes.js` hace `router.use(requireAuth, requireGerente)`,
+  así que un endpoint nuevo que se agregue ahí no puede quedar desprotegido por olvidarse el
+  middleware en esa línea.
+- **Ocultar el botón no es la seguridad.** El frontend esconde el menú si `es_gerente` es falso,
+  pero eso es una cortesía de interfaz. Quien fuerce la vista recibe `403` del backend.
+- **No hay pantalla para dar el rol.** Se asigna desde la base. Dar acceso a los datos de todos los
+  clientes no debería poder hacerse con un clic, ni desde la misma app que se está protegiendo.
+
+Construirlo destapó una falla que la auditoría anterior había dejado pasar: `GET /api/personas`
+devolvía la lista completa de personas —con DNI, email, teléfono y dirección— **a cualquier usuario
+logueado**. Tenía `requireAuth`, así que pasó la revisión de "¿qué rutas no piden sesión?". El
+problema era otro: pedía sesión, pero no preguntaba *de quién*. Ahora exige el rol de gerente.
+
+La lección es la misma del IDOR, vista desde el otro lado: autenticar (saber quién sos) no es
+autorizar (saber qué podés ver). Una auditoría que solo busca rutas sin `requireAuth` no encuentra
+este tipo de error.
+
 ---
 
 ## 3. Integridad del dinero: concurrencia y fallas
@@ -574,7 +602,7 @@ Porque no alcanza con estar logueado: cada endpoint que devuelve datos de alguie
 recurso pedido contra la identidad del JWT verificado (`exigirCbuPropio` / `exigirPersonaPropia`).
 Una llamada directa a la API con el CBU de otra persona responde 403, y sin token responde 401.
 Es verificable: está en los casos de prueba del
-[manual de usuario](MANUAL-USUARIO.md#9-casos-de-prueba-y-manejo-de-errores).
+[manual de usuario](MANUAL-USUARIO.md#10-casos-de-prueba-y-manejo-de-errores).
 
 **¿Quién es responsable de que un saldo nunca sea negativo?**
 La base de datos, no el código. La condición `saldo >= monto` viaja dentro del `UPDATE`, así que

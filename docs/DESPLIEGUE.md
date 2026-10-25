@@ -100,6 +100,38 @@ de orígenes permitidos en `backend/app.js`).
 > orígenes permitidos. Para probar en una preview hay que agregar ese dominio a `FRONTEND_URL`
 > separado por coma, o probar directamente sobre el dominio de producción.
 
+## 5. Dar el rol de gerente
+
+El panel de gerencia solo se habilita para personas con el rol `Gerente`. No hay una pantalla
+para asignarlo, a propósito: dar acceso a los datos de todos los clientes no debería poder
+hacerse con un clic. Se hace desde el **SQL Editor** de Supabase, una vez que el gerente ya
+completó su alta en la app:
+
+```sql
+-- 1. Crear el rol, si no existe. Las bases cargadas con una versión anterior de 02_data.sql
+--    no lo tienen; las nuevas sí. Primero se sincroniza el contador de ids, por si los roles
+--    se cargaron con ids explícitos y la secuencia quedó atrasada.
+SELECT setval(pg_get_serial_sequence('roles', 'id_rol'), COALESCE((SELECT MAX(id_rol) FROM roles), 1));
+INSERT INTO roles (nombre_rol, descripcion)
+SELECT 'Gerente', 'Acceso al panel de gerencia con la información general del banco'
+WHERE NOT EXISTS (SELECT 1 FROM roles WHERE nombre_rol = 'Gerente');
+
+-- 2. Asignárselo a la persona, buscándola por su email.
+INSERT INTO roles_x_personas (id_persona, id_rol)
+SELECT p.id, r.id_rol
+FROM personas p, roles r
+WHERE p.email = 'email-del-gerente@ejemplo.com' AND r.nombre_rol = 'Gerente'
+ON CONFLICT DO NOTHING
+RETURNING id_persona, id_rol;
+```
+
+Si el último paso devuelve una fila, quedó asignado; si no devuelve nada, el email no coincide
+con ninguna persona registrada. Es idempotente: correrlo dos veces no duplica nada.
+
+El gerente tiene que **recargar la página** para que le aparezca el botón en el menú. Para
+quitarle el acceso, se borra su fila de `roles_x_personas`: el backend verifica el rol en cada
+request, así que el corte es inmediato.
+
 ## Checklist post-deploy
 
 - [ ] `/api/health` devuelve `{"ok": true, "db": "ok"}`
