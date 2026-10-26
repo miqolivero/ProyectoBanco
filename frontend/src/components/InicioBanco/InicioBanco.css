@@ -1441,6 +1441,18 @@
 
   .main-content {
     padding: 20px;
+    overflow-wrap: anywhere; /* CBUs, emails y montos largos parten en vez de estirar la fila */
+  }
+
+  /* 🎯 Lo que se cortaba a la derecha: los ítems de grid/flex tienen min-width:auto, o sea
+     que no achican por debajo de su contenido más ancho (un texto nowrap, un CBU, una tabla
+     metida en una card). Una sola pieza así estiraba toda la columna más allá de la pantalla,
+     y como el documento tiene overflow-x:hidden no había forma de ir a verla.
+     Con :where() la regla pesa 0 en especificidad: pisa solo el "auto" por defecto, y los
+     min-width puestos a propósito (la tabla de 640px con su propio scroll, las barras del
+     gráfico) siguen ganando. */
+  .main-content :where(*) {
+    min-width: 0;
   }
 
   .main-header {
