@@ -1,0 +1,119 @@
+.completar-container {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background-color: #f4f6f8;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.completar-card {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 10px 25px -10px rgba(15, 52, 36, 0.2);
+}
+
+.completar-logo {
+  width: 44px;
+  height: 44px;
+  align-self: center;
+  margin-bottom: 14px;
+}
+
+.completar-icono {
+  align-self: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #eefdf4;
+  color: #0f3424;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.completar-card h2 {
+  margin: 0 0 8px 0;
+  text-align: center;
+  font-size: 21px;
+  color: #111827;
+}
+
+.completar-card p {
+  margin: 0 0 22px 0;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #4b5563;
+}
+
+.completar-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+  margin-bottom: 6px;
+}
+
+.completar-input {
+  padding: 12px;
+  margin-bottom: 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 16px;
+  color: #111827;
+  background-color: white;
+  outline: none;
+}
+
+.completar-input:focus {
+  border-color: #0f3424;
+  box-shadow: 0 0 0 3px rgba(15, 52, 36, 0.1);
+}
+
+.completar-alert {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  background-color: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.btn-completar {
+  padding: 13px;
+  border: none;
+  border-radius: 8px;
+  background-color: #0f3424;
+  color: white;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.btn-completar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-completar-salir {
+  margin-top: 12px;
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+}

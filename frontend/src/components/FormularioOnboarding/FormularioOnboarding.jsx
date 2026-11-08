@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useUser, useClerk } from '@clerk/clerk-react';
 import { TriangleAlert } from 'lucide-react';
 import logo from "../../assets/LogoMinimalista.png";
 import fondoSierras from "../../assets/screen.png";
 import './FormularioOnboarding.css'; // Importamos sus estilos independientes
 import { API_URL } from '../../config/api';
+import { obtenerProvincias } from '../../config/provincias';
 
 const FormularioOnboarding = ({ onRegistroExitoso }) => {
   const { user } = useUser();
@@ -17,11 +18,21 @@ const FormularioOnboarding = ({ onRegistroExitoso }) => {
     fecha_nacimiento: '',
     telefono: '',
     direccion: '',
+    provincia: '',
     alias: ''
   });
 
   const [cargando, setCargando] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [provincias, setProvincias] = useState([]);
+
+  useEffect(() => {
+    let cancelado = false;
+    obtenerProvincias()
+      .then(lista => { if (!cancelado) setProvincias(lista); })
+      .catch(err => { if (!cancelado) setErrorMsg(err.message); });
+    return () => { cancelado = true; };
+  }, []);
 
   const handleChange = (e) => {
     setFormData({
@@ -93,6 +104,7 @@ const FormularioOnboarding = ({ onRegistroExitoso }) => {
           apellido: formData.apellido,
           dni: formData.dni,
           direccion: formData.direccion,
+          provincia: formData.provincia,
           email: datosParaEnviar.email,
           telefono: formData.telefono,
           fecha_nac_date: formData.fecha_nacimiento,
@@ -190,10 +202,19 @@ const FormularioOnboarding = ({ onRegistroExitoso }) => {
               </div>
             </div>
 
-            {/* Dirección */}
-            <div className="input-group">
-              <label>Dirección Residencial</label>
-              <input type="text" name="direccion" placeholder="Av. San Martín 450" value={formData.direccion} onChange={handleChange} />
+            {/* Fila Doble: Dirección y Provincia (la provincia sale de una lista cerrada, no texto libre) */}
+            <div className="form-row">
+              <div className="input-group">
+                <label>Dirección Residencial</label>
+                <input type="text" name="direccion" placeholder="Av. San Martín 450" value={formData.direccion} onChange={handleChange} />
+              </div>
+              <div className="input-group">
+                <label>Provincia</label>
+                <select name="provincia" required value={formData.provincia} onChange={handleChange} disabled={provincias.length === 0}>
+                  <option value="" disabled>Elegí tu provincia</option>
+                  {provincias.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
             </div>
 
             {/* Alias */}

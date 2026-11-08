@@ -1,0 +1,283 @@
+.pagar-container {
+  padding: 12px 0;
+  max-width: 520px;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.pagar-eyebrow {
+  display: block;
+  font-size: 12.5px;
+  font-style: italic;
+  color: #0f3424;
+  opacity: 0.6;
+  margin-bottom: 6px;
+}
+
+.pagar-header-box h2 {
+  font-size: 24px;
+  color: #111827;
+  margin: 0 0 20px 0;
+}
+
+.pagar-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 28px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+}
+
+/* Comercio */
+.pagar-comercio {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.pagar-comercio-icono {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: #eefdf4;
+  color: #0f3424;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pagar-comercio-datos {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.pagar-comercio-datos strong {
+  font-size: 17px;
+  color: #111827;
+}
+
+.pagar-comercio-datos span {
+  font-size: 12.5px;
+  color: #6b7280;
+}
+
+.pagar-adherido {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  font-size: 13px;
+}
+
+.pagar-adherido svg {
+  flex-shrink: 0;
+}
+
+.pagar-descripcion {
+  margin: 16px 0 0 0;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+/* Desglose */
+.pagar-desglose {
+  margin-top: 20px;
+  padding: 16px 18px;
+  border-radius: 10px;
+  background: #f9fafb;
+  border: 1px solid #f3f4f6;
+}
+
+.pagar-desglose-fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 14px;
+  color: #4b5563;
+  padding: 5px 0;
+}
+
+.pagar-desglose-fila > span:last-child {
+  white-space: nowrap;
+}
+
+.pagar-desglose-fila.descuento {
+  color: #166534;
+}
+
+.pagar-desglose-fila em {
+  display: block;
+  margin-top: 2px;
+  font-style: normal;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.pagar-desglose-fila.total {
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px dashed #d1d5db;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f3424;
+}
+
+.pagar-saldo {
+  margin: 14px 0 0 0;
+  font-size: 12.5px;
+  color: #6b7280;
+}
+
+.pagar-alert {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  background-color: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.pagar-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.btn-pag-principal,
+.btn-pag-secundario {
+  padding: 12px 22px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: opacity 0.2s, background-color 0.2s;
+}
+
+.btn-pag-principal {
+  background-color: #0f3424;
+  color: white;
+  border: none;
+}
+
+.btn-pag-principal:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btn-pag-secundario {
+  background-color: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #d1d5db;
+}
+
+.btn-pag-secundario:hover:not(:disabled) {
+  background-color: #e5e7eb;
+}
+
+.btn-pag-principal:disabled,
+.btn-pag-secundario:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Estados terminales (pagado, cancelado, no encontrado, propio) */
+.pagar-estado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.pagar-estado h3 {
+  margin: 0;
+  font-size: 21px;
+  color: #111827;
+}
+
+.pagar-estado p {
+  margin: 6px 0 0 0;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.pagar-estado button {
+  margin-top: 22px;
+}
+
+.pagar-estado-icono {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.pagar-estado-icono.exito {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.pagar-estado-icono.neutro {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.pagar-estado .pagar-estado-monto {
+  margin-top: 8px;
+  font-size: 32px;
+  font-weight: 700;
+  color: #0f3424;
+}
+
+.pagar-ahorro {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pagar-estado .pagar-comprobante {
+  margin-top: 14px;
+  font-size: 12px;
+}
+
+.pagar-comprobante span {
+  font-family: monospace;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 480px) {
+  .pagar-card {
+    padding: 22px 18px;
+  }
+
+  .pagar-actions {
+    flex-direction: column-reverse;
+  }
+}

@@ -1,13 +1,17 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useUser } from "@clerk/clerk-react";
 import { TriangleAlert } from "lucide-react";
 import FormularioOnboarding from "../FormularioOnboarding/FormularioOnboarding";
 import InicioBanco from "../InicioBanco/InicioBanco";
+import CompletarProvincia from "../CompletarProvincia/CompletarProvincia";
 import "./ManejadorUsuario.css";
 import { API_URL } from '../../config/api';
 
-export default function ManejadorUsuario() {
-  const { user } = useUser();
+export default function ManejadorUsuario({ usuarioDemo = null }) {
+  const { user: usuarioClerk } = useUser();
+  // En la demo no hay usuario de Clerk: el "id" es el de la persona demo (ver config/demo.js).
+  // useMemo para que la identidad sea estable y no dispare el efecto de carga en cada render.
+  const user = useMemo(() => (usuarioDemo ? { id: usuarioDemo } : usuarioClerk), [usuarioDemo, usuarioClerk]);
   const [datosPersona, setDatosPersona] = useState(null);
   const [cargando, setCargando] = useState(true);
   // 🎯 Distingue "todavía no me registré" (404 real) de "no se pudo confirmar" (server caído,
@@ -72,6 +76,11 @@ export default function ManejadorUsuario() {
         </button>
       </div>
     );
+  }
+
+  // Cuenta creada antes de que la provincia fuera obligatoria: la completa antes de entrar.
+  if (datosPersona && !datosPersona.provincia) {
+    return <CompletarProvincia datosUsuario={datosPersona} alCompletar={cargarDatosUsuario} />;
   }
 
   if (datosPersona) {

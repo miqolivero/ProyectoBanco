@@ -1,0 +1,113 @@
+.advertencia-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  animation: advertencia-fade 0.15s ease-out;
+}
+
+.advertencia-modal {
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 440px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.25);
+  text-align: center;
+  animation: advertencia-pop 0.18s ease-out;
+}
+
+.advertencia-icono {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 12px auto;
+  border-radius: 50%;
+  background: #fef3c7;
+  color: #b45309;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.advertencia-modal h3 {
+  margin: 0 0 10px 0;
+  font-size: 19px;
+  color: #111827;
+}
+
+.advertencia-destino {
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.advertencia-mensaje {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: #374151;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.advertencia-acciones {
+  display: flex;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.advertencia-acciones button {
+  flex: 1;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.btn-adv-cancelar {
+  background-color: #0f3424;
+  color: white;
+  border: none;
+}
+
+.btn-adv-confirmar {
+  background-color: white;
+  color: #4b5563;
+  border: 1px solid #d1d5db;
+}
+
+.btn-adv-cancelar:disabled,
+.btn-adv-confirmar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@keyframes advertencia-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes advertencia-pop {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (max-width: 480px) {
+  .advertencia-modal {
+    padding: 24px 20px;
+  }
+
+  .advertencia-acciones {
+    flex-direction: column-reverse;
+  }
+}

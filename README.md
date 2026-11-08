@@ -288,10 +288,21 @@ psql -U postgres -d banco_db -f backend/init/01_schema.sql
 
 # Datos de ejemplo (11 clientes, 113 movimientos)
 psql -U postgres -d banco_db -f backend/init/02_data.sql
+
+# Migración: cobros con QR, eventos/promociones, provincia y bonificación
+psql -U postgres -d banco_db -f backend/init/04_cobros_eventos.sql
+
+# Eventos de prueba y comercios adheridos
+psql -U postgres -d banco_db -f backend/init/05_datos_eventos.sql
 ```
 
 > `02_data.sql` está pensado para una base **recién creada** y aborta de forma controlada si ya
 > hay clientes cargados, para no duplicar datos ni pisar información real.
+>
+> `04` y `05` se pueden correr sobre una base que ya tiene datos (también la de producción): no
+> borran nada y son idempotentes. `05` ata las adhesiones a cuentas que ya existen buscándolas
+> por CBU y saltea las que no encuentra — para Supabase hay que cambiar los CBU de su lista por
+> cuentas de prueba reales de esa base.
 
 ### Levantar el proyecto
 
@@ -346,7 +357,9 @@ usar el *Session pooler* de Supabase y no la conexión directa.
 │   ├── init/
 │   │   ├── 01_schema.sql       # DDL: creación de tablas + datos maestros
 │   │   ├── 02_data.sql         # DML: datos de ejemplo
-│   │   └── 03_select.sql       # Query de consulta principal
+│   │   ├── 03_select.sql       # Query de consulta principal
+│   │   ├── 04_cobros_eventos.sql  # Migración: cobros QR, eventos, adhesiones, provincia
+│   │   └── 05_datos_eventos.sql   # Eventos de prueba y comercios adheridos
 │   ├── package.json
 │   └── .env                    # Variables de entorno (no se commitea)
 │

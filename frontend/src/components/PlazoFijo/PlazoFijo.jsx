@@ -21,6 +21,10 @@ export default function PlazoFijo({ datosUsuario, alConstituirExitoso, alLiquida
     return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(valor || 0);
   };
 
+  // Formato argentino (coma decimal) y siempre 2 decimales, igual que en Préstamos.
+  const formatearTasa = (valor) =>
+    `${new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(valor) || 0)}%`;
+
   const cargarTasa = async () => {
     try {
       const response = await fetch(`${API_URL}/api/plazos-fijos/tasa`);
@@ -131,13 +135,12 @@ export default function PlazoFijo({ datosUsuario, alConstituirExitoso, alLiquida
           <span>Consultando tasa vigente...</span>
         ) : tasa ? (
           <>
+            {/* Solo la tasa: cómo se calcula (referencia de mercado menos el margen del banco)
+                es información interna y no se le muestra al cliente. */}
             <div>
-              <span className="pf-tasa-label">TNA que ofrece el banco</span>
-              <strong className="pf-tasa-valor">{tasa.tnaOfrecida}%</strong>
+              <span className="pf-tasa-label">Tasa nominal anual (TNA)</span>
+              <strong className="pf-tasa-valor">{formatearTasa(tasa.tnaOfrecida)}</strong>
             </div>
-            <span className="pf-tasa-detalle">
-              Tasa de referencia de mercado: {tasa.tasaReferencia}% (promedio de ~30 bancos, ArgentinaDatos) − {tasa.spreadBps} bps
-            </span>
           </>
         ) : (
           <span>No se pudo obtener la tasa vigente en este momento.</span>
@@ -206,10 +209,13 @@ export default function PlazoFijo({ datosUsuario, alConstituirExitoso, alLiquida
               <div className="pf-item-info">
                 <strong>{formatearMoneda(pf.capital)}</strong>
                 <span className="pf-item-detalle">
-                  TNA {pf.tna}% · Vence {new Date(pf.fecha_vencimiento).toLocaleDateString('es-AR')}
-                  {pf.estado === 'ACTIVO' && pf.diasRestantes > 0 && ` · Faltan ${pf.diasRestantes} día(s)`}
+                  TNA {formatearTasa(pf.tna)} · {pf.estado === 'ACTIVO' ? 'Vence' : 'Venció'} {new Date(pf.fecha_vencimiento).toLocaleDateString('es-AR')}
+                  {pf.estado === 'ACTIVO' && pf.diasRestantes > 0 && ` · Faltan ${pf.diasRestantes} ${pf.diasRestantes === 1 ? 'día' : 'días'}`}
                 </span>
-                <span className="pf-item-interes">Interés estimado: {formatearMoneda(pf.interesEstimado)}</span>
+                {/* Un plazo ya liquidado no tiene un interés "estimado": ya se cobró. */}
+                <span className="pf-item-interes">
+                  {pf.estado === 'ACTIVO' ? 'Interés estimado' : 'Interés cobrado'}: {formatearMoneda(pf.interesEstimado)}
+                </span>
               </div>
               {pf.estado === 'ACTIVO' ? (
                 <button

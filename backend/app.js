@@ -46,8 +46,12 @@ const seguroRoutes = require('./routes/seguroRoutes');
 const cedearRoutes = require('./routes/cedearRoutes');
 const asistenteRoutes = require('./routes/asistenteRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const cobroRoutes = require('./routes/cobroRoutes');
+const eventoRoutes = require('./routes/eventoRoutes');
+const beneficioRoutes = require('./routes/beneficioRoutes');
+const demoRoutes = require('./routes/demoRoutes');
 const { centralBankFetch } = require('./config/centralBank');
-const { clerkAttach } = require('./middlewares/auth');
+const { clerkAttach, demoAttach } = require('./middlewares/auth');
 const pool = require('./config/db');
 
 // --- 4. CONFIGURACIÓN GLOBAL ---
@@ -86,6 +90,11 @@ app.use(express.json());
 // 🎯 Lee y valida (si viene) el JWT de Clerk en cada request y arma req.auth — no bloquea nada
 // por sí solo, es lo que después usa requireAuth (middlewares/auth.js) en cada ruta protegida.
 app.use(clerkAttach);
+// 🎯 Cuenta demo: las rutas para entrar/salir van antes de demoAttach (abren y cierran la
+// sesión, no corren adentro de ella). demoAttach hace que cada request con token de demo corra
+// en su transacción descartable — ver config/sandboxDemo.js.
+app.use('/api/demo', demoRoutes);
+app.use(demoAttach);
 
 // --- 7. HEALTH CHECK ---
 // 🎯 Sirve para dos cosas en producción: que Render pueda chequear si el servicio está vivo, y
@@ -114,6 +123,9 @@ app.use('/api/seguros', seguroRoutes);
 app.use('/api/cedears', cedearRoutes);
 app.use('/api/asistente', asistenteRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/cobros', cobroRoutes);
+app.use('/api/eventos', eventoRoutes);
+app.use('/api/beneficios', beneficioRoutes);
 
 // --- 9. MANEJO DE ERRORES BÁSICO ---
 app.use((err, req, res, next) => {

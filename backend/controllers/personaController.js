@@ -1,6 +1,15 @@
 const Persona = require('../models/personaModel');
 const { centralBankFetch } = require('../config/centralBank');
 const { exigirCbuPropio, exigirPersonaPropia, obtenerUserIdSesion } = require('../middlewares/auth');
+const { PROVINCIAS, esProvinciaValida } = require('../utils/provincias');
+
+const MENSAJE_PROVINCIA_INVALIDA = "Elegí tu provincia de la lista.";
+
+// Lista de provincias para los selects del registro, Ajustes y "completá tu provincia". Pública:
+// el registro la necesita antes de que exista la persona, y no tiene ningún dato privado.
+exports.obtenerProvincias = (req, res) => {
+    res.json(PROVINCIAS);
+};
 
 exports.obtenerPersonas = async (req, res) => {
     try {
@@ -74,10 +83,15 @@ function calcularEdad(fechaNacimiento) {
 }
 
 exports.crearPersona = async (req, res) => {
-    const { nombre, apellido, dni, email, telefono, fecha_nacimiento, direccion, alias, clerkId } = req.body;
+    const { nombre, apellido, dni, email, telefono, fecha_nacimiento, direccion, provincia, alias, clerkId } = req.body;
 
     if (!clerkId || !dni || !nombre || !apellido || !fecha_nacimiento) {
         return res.status(400).json({ error: "Faltan datos obligatorios (clerkId, dni, nombre, apellido, fecha_nacimiento)" });
+    }
+    // Se valida antes de registrar a la persona en el Banco Central, igual que la edad: si no,
+    // quedaría creada en la red externa con un registro local que nunca se llega a guardar.
+    if (!esProvinciaValida(provincia)) {
+        return res.status(400).json({ error: MENSAJE_PROVINCIA_INVALIDA });
     }
 
     // 🎯 El registro todavía no puede pasar por requireAuth (la persona recién se está creando,
@@ -148,8 +162,8 @@ exports.crearPersona = async (req, res) => {
         if (responseBCRA.status === 201 || responseBCRA.status === 200) {
             // 5. Guardar en Postgres mediante tu modelo
             await Persona.create({
-                nombre, apellido, dni, email, telefono, fecha_nacimiento, direccion, 
-                alias: aliasFinal, 
+                nombre, apellido, dni, email, telefono, fecha_nacimiento, direccion, provincia,
+                alias: aliasFinal,
                 cbu: dataBCRA.cbu,
                 clerkId
             });
@@ -286,9 +300,12 @@ exports.cambiarAlias = async (req, res) => {
 // y cambiarlos ahí es una operación distinta (ver cambiarAlias), fuera de alcance acá.
 exports.actualizarPerfil = async (req, res) => {
     const { id } = req.params;
-    const { email, telefono, direccion } = req.body;
+    const { email, telefono, direccion, provincia } = req.body;
 
     if (!exigirPersonaPropia(req, res, id)) return;
+    if (!esProvinciaValida(provincia)) {
+        return res.status(400).json({ error: MENSAJE_PROVINCIA_INVALIDA });
+    }
     if (!email || !String(email).trim()) {
         return res.status(400).json({ error: "El email no puede estar vacío." });
     }
@@ -301,7 +318,8 @@ exports.actualizarPerfil = async (req, res) => {
         const persona = await Persona.actualizarDatosContacto(id, {
             email: String(email).trim(),
             telefono: telefono ? String(telefono).trim() : null,
-            direccion: direccion ? String(direccion).trim() : null
+            direccion: direccion ? String(direccion).trim() : null,
+            provincia
         });
 
         if (!persona) {
@@ -311,6 +329,33 @@ exports.actualizarPerfil = async (req, res) => {
         return res.status(200).json({ message: "Datos actualizados correctamente", persona });
     } catch (error) {
         console.error("❌ Error en actualizarPerfil:", error.message);
+        return res.status(500).json({ error: "Error de servidor", detalle: error.message });
+    }
+};
+
+// COMPLETAR PROVINCIA: las cuentas creadas antes de que fuera obligatoria la cargan en el
+// próximo ingreso. No reciben bonificación aunque elijan Córdoba: es solo para cuentas que se
+// abren con domicilio en Córdoba (ver Persona.create).
+exports.completarDomicilio = async (req, res) => {
+    const { id } = req.params;
+    const { provincia, direccion } = req.body;
+
+    if (!exigirPersonaPropia(req, res, id)) return;
+    if (!esProvinciaValida(provincia)) {
+        return res.status(400).json({ error: MENSAJE_PROVINCIA_INVALIDA });
+    }
+
+    try {
+        const persona = await Persona.completarDomicilio(id, {
+            provincia,
+            direccion: direccion && String(direccion).trim() ? String(direccion).trim() : null
+        });
+        if (!persona) {
+            return res.status(404).json({ error: "No se encontró la persona." });
+        }
+        return res.status(200).json({ message: "Domicilio actualizado", persona });
+    } catch (error) {
+        console.error("❌ Error en completarDomicilio:", error.message);
         return res.status(500).json({ error: "Error de servidor", detalle: error.message });
     }
 };

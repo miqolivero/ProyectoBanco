@@ -1,11 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useClerk } from '@clerk/clerk-react';
 import * as XLSX from 'xlsx';
 import {
   Home, ArrowLeftRight, Receipt, CreditCard,
   TrendingUp, TrendingDown, Landmark, BarChart3, History, Settings, User, LogOut,
   Eye, EyeOff, Pencil, Check, X, DollarSign, Send, Download, Briefcase, Plus,
-  ChevronDown, ChevronRight, Layers, CalendarRange, Hash, Bot, ShieldCheck
+  ChevronDown, ChevronRight, Layers, CalendarRange, Hash, Bot, ShieldCheck,
+  QrCode, PartyPopper, PiggyBank, BadgeCheck
 } from 'lucide-react';
 import logo from "../../assets/LogoMinimalista.png";
 import Transferencias from '../Transferencia/Transferencias';
@@ -24,8 +25,15 @@ import SelectorCuenta from '../SelectorCuenta/SelectorCuenta';
 import ComprobanteMovimiento from '../ComprobanteMovimiento/ComprobanteMovimiento';
 import Asistente from '../Asistente/Asistente';
 import PanelGerente from '../PanelGerente/PanelGerente';
+import Cobrar from '../Cobrar/Cobrar';
+import PagarCobro from '../PagarCobro/PagarCobro';
+import Calendario from '../Calendario/Calendario';
+import BannerDemo from '../BannerDemo/BannerDemo';
+import { enDemo, salirDeDemo } from '../../config/demo';
+import { COBROS_QR_HABILITADOS } from '../../config/funcionalidades';
 import './InicioBanco.css';
 import { API_URL } from '../../config/api';
+import { leerCobroPendiente, limpiarCobroPendiente } from '../../config/linkCobro';
 
 // 🎯 Sidebar agrupada en subcategorías: en vez de 14 items sueltos, los que comparten
 // "familia" quedan dentro de un grupo colapsable. Historial queda suelto a propósito (no es
@@ -43,8 +51,20 @@ function grupoDeVista(vista) {
 
 export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
   const { signOut } = useClerk();
+  // En la cuenta demo "cerrar sesión" es salir de la demo (y deshacer todo lo hecho en ella).
+  const esDemo = enDemo();
+  const cerrarSesion = () => (esDemo ? salirDeDemo() : signOut());
   
-  const [vistaActual, setVistaActual] = useState('inicio');
+  // 🎯 Si se llegó escaneando un QR de cobro, se arranca directo en la pantalla de pago (el id
+  // lo guardó main.jsx antes del login, ver config/linkCobro.js). Se lee sin borrar en el
+  // inicializador —StrictMode lo llama dos veces— y se limpia en el efecto de abajo.
+  const [cobroAPagar, setCobroAPagar] = useState(() => leerCobroPendiente());
+  const [vistaActual, setVistaActual] = useState(() => (leerCobroPendiente() ? 'pagar-cobro' : 'inicio'));
+  useEffect(() => { limpiarCobroPendiente(); }, []);
+
+  // Evento destacado, ahorro del mes y bonificación: todo calculado por el backend.
+  const [beneficios, setBeneficios] = useState(null);
+
   const [movimientos, setMovimientos] = useState([]);
   const [cargandoMovs, setCargandoMovs] = useState(true);
   const [triggerRecarga, setTriggerRecarga] = useState(0);
@@ -104,6 +124,22 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
     })();
     return () => { cancelado = true; };
   }, [datosUsuario?.id]);
+
+  // Se vuelve a pedir con cada triggerRecarga (ej. después de pagar un QR, para que el
+  // "Ahorraste con Calamuchita" se actualice al volver a Inicio).
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/beneficios/resumen`);
+        const data = await res.json();
+        if (!cancelado && res.ok) setBeneficios(data);
+      } catch (err) {
+        console.error('❌ Error trayendo el resumen de beneficios:', err);
+      }
+    })();
+    return () => { cancelado = true; };
+  }, [triggerRecarga]);
 
   const handleAbrirCuentaUSD = async () => {
     try {
@@ -172,6 +208,11 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
     if (!mostrarSaldo) return moneda === 'USD' ? "US$ *******" : "$ *******";
     return new Intl.NumberFormat(moneda === 'USD' ? 'en-US' : 'es-AR', { style: 'currency', currency: moneda }).format(valor || 0);
   };
+
+  // Para precios del banco (mantenimiento): no son el saldo del usuario, así que no se ocultan
+  // con el botón del ojo como formatearMoneda.
+  const formatearMonedaVisible = (valor) =>
+    new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(Number(valor) || 0);
 
   const formatearFecha = (stringFecha) => {
     if (!stringFecha) return '---';
@@ -391,7 +432,19 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
     setTriggerRecarga(prev => prev + 1);
   };
 
+  const handlePagoCobroExitoso = (montoRestar) => {
+    setSaldoEspejo(prev => prev - montoRestar);
+    setTriggerRecarga(prev => prev + 1);
+  };
+
+  // Al comercio le llega la plata por la sincronización con el Central (como cualquier
+  // transferencia recibida): se fuerza una ahora en vez de esperar al heartbeat de 30 s.
+  const handleCobroRecibido = useCallback(() => {
+    setTriggerRecarga(prev => prev + 1);
+  }, []);
+
   const handleVolverAlInicio = () => {
+    setCobroAPagar(null);
     if (actualizarDatosBase) { actualizarDatosBase(); }
     setTriggerRecarga(prev => prev + 1);
     setVistaActual('inicio'); 
@@ -565,6 +618,22 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
             <History size={18} /> Historial
           </button>
 
+          {COBROS_QR_HABILITADOS ? (
+            <button className={`menu-item ${vistaActual === 'cobrar' ? 'active' : ''}`} onClick={() => setVistaActual('cobrar')}>
+              <QrCode size={18} /> Cobrar con QR
+            </button>
+          ) : (
+            <button className="menu-item disabled" disabled title="Muy pronto vas a poder cobrar y pagar con QR">
+              <QrCode size={18} /> Cobrar con QR <span className="menu-badge-pronto">Próximamente</span>
+            </button>
+          )}
+
+          {/* 🎯 Calendario de beneficios / descuentos por evento: todavía no se ofrece (el backend
+              lo tiene apagado, ver backend/config/funcionalidades.js). */}
+          <button className="menu-item disabled" disabled title="Muy pronto: descuentos pagando con QR en las fiestas de la región">
+            <PartyPopper size={18} /> Beneficios <span className="menu-badge-pronto">Próximamente</span>
+          </button>
+
           <div className="menu-group">
             <button
               className={`menu-group-header ${grupoDeVista(vistaActual) === 'pagos' ? 'active' : ''}`}
@@ -683,14 +752,17 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
 
         {/* 🎯 Cerrar sesión vive acá y no dentro del popup de perfil: ahí había que adivinar
             que estaba escondido detrás del nombre. Al pie de la sidebar está siempre a la vista. */}
-        <button onClick={() => signOut()} className="btn-cerrar-sesion">
-          <LogOut size={16} /> Cerrar Sesión
+        <button onClick={cerrarSesion} className="btn-cerrar-sesion">
+          <LogOut size={16} /> {esDemo ? 'Salir de la demo' : 'Cerrar Sesión'}
         </button>
       </aside>
 
       {/* 💻 CONTENIDO DINÁMICO */}
       <main className="main-content">
-        
+        {esDemo && (
+          <BannerDemo alPagarAca={(idCobro) => { setCobroAPagar(idCobro); setVistaActual('pagar-cobro'); }} />
+        )}
+
         {/* 🎯 El header fijo con el "saldo total" en una pill quedaba muy vacío en pantallas que
             no son Inicio (ese dato ya se repite en el balance-card / cards-panel de cada
             pantalla). Ahora el header completo es exclusivo de Inicio: solo el saludo. */}
@@ -706,6 +778,55 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
         {/* 1. VISTA INICIO (DISEÑO INTACTO, SOLO CORREGIDA LA VARIABLE DE TEXTO) */}
         {vistaActual === 'inicio' && (
           <>
+            {/* 🎯 Beneficios "de nuestra gente": evento vigente, ahorro del mes pagando con QR y
+                bonificación del mantenimiento. Todo viene calculado de /api/beneficios/resumen. */}
+            {beneficios && (beneficios.eventoDestacado || beneficios.mantenimiento || Number(beneficios.ahorroMes?.monto) > 0) && (
+              <div className="beneficios-strip">
+                {beneficios.eventoDestacado && (
+                  <button type="button" className="beneficio-card evento" onClick={() => setVistaActual('beneficios')}>
+                    <span className="beneficio-icono"><PartyPopper size={18} /></span>
+                    <span className="beneficio-texto">
+                      <strong>Hoy: {Number(beneficios.eventoDestacado.porcentaje_descuento)}% en {beneficios.eventoDestacado.nombre}</strong>
+                      <span>Pagando con QR en comercios adheridos · Ver calendario</span>
+                    </span>
+                  </button>
+                )}
+                {Number(beneficios.ahorroMes?.monto) > 0 && (
+                  <div className="beneficio-card ahorro">
+                    <span className="beneficio-icono"><PiggyBank size={18} /></span>
+                    <span className="beneficio-texto">
+                      <strong>Ahorraste con Calamuchita {formatearMoneda(beneficios.ahorroMes.monto)}</strong>
+                      <span>En {beneficios.ahorroMes.mes}, pagando con QR</span>
+                    </span>
+                  </div>
+                )}
+                {beneficios.bonificacion?.vigente && (
+                  <div className="beneficio-card bonificacion">
+                    <span className="beneficio-icono"><BadgeCheck size={18} /></span>
+                    <span className="beneficio-texto">
+                      <strong>Mantenimiento bonificado hasta {beneficios.bonificacion.hastaTexto}</strong>
+                      <span>
+                        Beneficio para nuestra gente
+                        {beneficios.mantenimiento && ` · Te ahorrás ${formatearMonedaVisible(beneficios.mantenimiento.total)} por mes`}
+                      </span>
+                    </span>
+                  </div>
+                )}
+                {beneficios.mantenimiento && !beneficios.mantenimiento.bonificado && (
+                  <div className="beneficio-card mantenimiento">
+                    <span className="beneficio-icono"><Receipt size={18} /></span>
+                    <span className="beneficio-texto">
+                      <strong>Mantenimiento mensual {formatearMonedaVisible(beneficios.mantenimiento.total)}</strong>
+                      <span>
+                        {formatearMonedaVisible(beneficios.mantenimiento.neto)} + IVA {Number(beneficios.mantenimiento.porcentajeIva)}%
+                        ({formatearMonedaVisible(beneficios.mantenimiento.iva)})
+                      </span>
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="dashboard-grid">
               <div className="grid-left">
                 
@@ -873,6 +994,28 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
             alCancelar={handleVolverAlInicio}
           />
         )}
+
+        {/* 2.1. COBRAR CON QR */}
+        {vistaActual === 'cobrar' && (
+          <Cobrar
+            datosUsuario={datosUsuario}
+            alCobroRecibido={handleCobroRecibido}
+            alCancelar={handleVolverAlInicio}
+          />
+        )}
+
+        {/* 2.2. PAGAR UN COBRO (se llega por el link del QR; no está en el menú) */}
+        {vistaActual === 'pagar-cobro' && cobroAPagar && (
+          <PagarCobro
+            idCobro={cobroAPagar}
+            datosUsuario={{...datosUsuario, saldo: saldoEspejo}}
+            alPagoExitoso={handlePagoCobroExitoso}
+            alCancelar={handleVolverAlInicio}
+          />
+        )}
+
+        {/* 2.3. CALENDARIO DE BENEFICIOS */}
+        {vistaActual === 'beneficios' && <Calendario alCancelar={handleVolverAlInicio} />}
 
         {/* 3. VISTA FORMULARIO DEPÓSITOS */}
         {vistaActual === 'depositar' && (

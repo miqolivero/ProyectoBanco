@@ -5,9 +5,16 @@ const { verificarCbuPermitidoEnDemo } = require('../config/demoMode');
 const { esMontoPositivo } = require('../utils/validaciones');
 const { exigirCbuPropio } = require('../middlewares/auth');
 
+const resultado = (status, body) => ({ status, body });
+
+// Mensaje fijo de la advertencia anti-estafa (lo muestra el frontend en el modal de confirmación).
+// También la usa el pago de cobros con QR (cobroController), por eso se exporta.
+const MENSAJE_CBU_NUEVO = "Es la primera vez que le transferís a esta cuenta. ¿Alguien te pidió esta transferencia por teléfono o mensaje? Calamuchita Bank nunca te va a pedir que transfieras dinero.";
+exports.MENSAJE_CBU_NUEVO = MENSAJE_CBU_NUEVO;
+
 // 1. REALIZAR TRANSFERENCIA (Soporta CBU o Alias automáticamente y registra el Titular)
 exports.realizarTransferencia = async (req, res) => {
-    const { cbu_origen, cbu_destino, monto, concepto } = req.body;
+    const { cbu_origen, cbu_destino, monto, concepto, confirmar_cbu_nuevo } = req.body;
 
     if (!cbu_origen || !cbu_destino || !monto) {
         return res.status(400).json({ error: "Faltan datos obligatorios" });
@@ -22,6 +29,26 @@ exports.realizarTransferencia = async (req, res) => {
     }
     if (!exigirCbuPropio(req, res, cbu_origen)) return;
 
+    const { status, body } = await exports.ejecutarTransferencia({
+        cbuOrigen: cbu_origen,
+        cbuDestino: cbu_destino,
+        monto,
+        concepto,
+        cbusPropios: req.personaAutenticada.cbus.map(c => c.cbu),
+        controlCbuNuevo: confirmar_cbu_nuevo !== true
+    });
+    res.status(status).json(body);
+};
+
+// 🎯 El flujo completo de una transferencia, separado del endpoint para que el pago de un
+// cobro con QR (cobroController) mueva la plata EXACTAMENTE por el mismo camino: mismas
+// validaciones, misma reserva atómica de saldo, mismo envío al Central y mismo registro local.
+// No escribe en `res`: devuelve { status, body } y quien la llama decide qué responder.
+// Supone que el caller ya validó el monto y que cbuOrigen es de la persona autenticada.
+//   - cbusPropios: todos los CBU de quien transfiere (para el control de CBU nuevo).
+//   - controlCbuNuevo: si es true y nunca le transfirió a ese destino, responde 409 sin mover
+//     nada. El frontend muestra la advertencia y, si el usuario confirma, reintenta con false.
+exports.ejecutarTransferencia = async ({ cbuOrigen: cbu_origen, cbuDestino: cbu_destino, monto, concepto, cbusPropios = [], controlCbuNuevo = false }) => {
     // 🎯 true una vez que reservarSaldoAtomico debitó de verdad — si algo falla después (el
     // Central rechaza, o cualquier excepción), el catch/rechazo de abajo tiene que reintegrar
     // este monto, si no la plata desaparece localmente sin haber salido de verdad.
@@ -39,14 +66,14 @@ exports.realizarTransferencia = async (req, res) => {
         const cuentaOrigen = await Movimiento.obtenerCuentaPorCbu(cbu_origen);
 
         if (cuentaOrigen === null) {
-            return res.status(404).json({ error: "Cuenta de origen no encontrada localmente" });
+            return resultado(404, { error: "Cuenta de origen no encontrada localmente" });
         }
 
         const saldoDisponible = cuentaOrigen.saldo;
         const monedaOrigen = cuentaOrigen.moneda || 'ARS';
 
         if (Number(saldoDisponible) < Number(monto)) {
-            return res.status(400).json({ error: "Saldo insuficiente", disponible: saldoDisponible });
+            return resultado(400, { error: "Saldo insuficiente", disponible: saldoDisponible });
         }
 
         let cbuDestinoFinal = cbu_destino.trim();
@@ -64,7 +91,7 @@ exports.realizarTransferencia = async (req, res) => {
 
             if (!respuestaAlias.ok) {
                 console.error("⚠️ Error al buscar alias en el Central:", datosPersona);
-                return res.status(404).json({ 
+                return resultado(404, { 
                     error: "El Alias ingresado no pertenece a ningún usuario registrado en la red central." 
                 });
             }
@@ -75,12 +102,29 @@ exports.realizarTransferencia = async (req, res) => {
                 nombreTitularFinal = `${datosPersona.nombre || ''} ${datosPersona.apellido || ''}`.trim() || "Titular No Especificado";
                 console.log(`🎯 Alias traducido con éxito. Destinatario CBU: ${cbuDestinoFinal} (${nombreTitularFinal})`);
             } else {
-                return res.status(400).json({ error: "El Central respondió pero no devolvió un CBU válido para ese alias." });
+                return resultado(400, { error: "El Central respondió pero no devolvió un CBU válido para ese alias." });
             }
         }
         // Nota: para CBU directo no hace falta un GET separado (el endpoint /persons/cbu/:cbu no existe;
         // el real es /persons/:cbu). El propio POST /transactions ya devuelve nombreDestino, así que
         // el nombre del titular se toma de ahí más abajo.
+
+        // 🎯 Advertencia anti-estafa: si nunca le transfirió a este CBU (con ninguna de sus
+        // cuentas), se frena acá — antes de reservar saldo o tocar el Central — y se pide
+        // confirmación. Va después de traducir el alias para comparar siempre contra el CBU real.
+        if (controlCbuNuevo) {
+            const yaLeTransfirio = cbusPropios.includes(cbuDestinoFinal)
+                || await Movimiento.yaTransfirioA(cbusPropios, cbuDestinoFinal);
+            if (!yaLeTransfirio) {
+                return resultado(409, {
+                    error: MENSAJE_CBU_NUEVO,
+                    requiereConfirmacion: true,
+                    motivo: 'CBU_NUEVO',
+                    cbuDestino: cbuDestinoFinal,
+                    nombreDestino: nombreTitularFinal !== "Titular No Especificado" ? nombreTitularFinal : null
+                });
+            }
+        }
 
         // 🐛 BUG CORREGIDO: nada acá validaba que origen y destino fueran de la misma moneda —
         // se podía transferir USD a un CBU en ARS (o viceversa) sin que nadie lo impida. El
@@ -96,12 +140,12 @@ exports.realizarTransferencia = async (req, res) => {
         } else if (respuestaCuentaDestino.status !== 404) {
             // El Central respondió pero no con un 404 limpio (ej. caído/timeout) — no podemos
             // confirmar la moneda del destino, así que frenamos en vez de asumir que está bien.
-            return res.status(502).json({ error: "No pudimos verificar la cuenta de destino en el Banco Central. Probá de nuevo en unos minutos." });
+            return resultado(502, { error: "No pudimos verificar la cuenta de destino en el Banco Central. Probá de nuevo en unos minutos." });
         }
         // Un CBU sin fila en /accounts es una cuenta ARS "normal" (esa ruta solo lista las cuentas
         // con moneda propia registrada aparte) — por eso el default acá es ARS, no un rechazo.
         if ((monedaDestino || 'ARS') !== monedaOrigen) {
-            return res.status(400).json({
+            return resultado(400, {
                 error: `No se puede transferir ${monedaOrigen} a una cuenta en ${monedaDestino || 'ARS'}. Elegí una cuenta destino en la misma moneda.`
             });
         }
@@ -113,7 +157,7 @@ exports.realizarTransferencia = async (req, res) => {
         // Central. Si el Central termina rechazando la transferencia, se reintegra más abajo.
         const reservaOk = await Movimiento.reservarSaldoAtomico(cbu_origen, monto);
         if (!reservaOk) {
-            return res.status(400).json({ error: "Saldo insuficiente", disponible: saldoDisponible });
+            return resultado(400, { error: "Saldo insuficiente", disponible: saldoDisponible });
         }
         saldoReservado = true;
 
@@ -149,7 +193,7 @@ exports.realizarTransferencia = async (req, res) => {
             );
 
             // 4. Armamos el comprobante completo para que el frontend lo muestre/descargue sin pedir nada más
-            res.status(201).json({
+            return resultado(201, {
                 message: "¡Transferencia exitosa!",
                 id: idFinal,
                 comprobante: {
@@ -169,11 +213,11 @@ exports.realizarTransferencia = async (req, res) => {
             // para evitar la carrera — hay que devolverlo, si no el usuario pierde saldo sin que
             // la transferencia haya salido.
             await Movimiento.revertirReservaSaldo(cbu_origen, monto);
-            res.status(responseBCRA.status).json({ error: "Rechazo del Central", detalle: dataBCRA });
+            return resultado(responseBCRA.status, { error: "Rechazo del Central", detalle: dataBCRA });
         }
     } catch (error) {
         if (error.esRestriccionDemo) {
-            return res.status(403).json({ error: error.message });
+            return resultado(403, { error: error.message });
         }
         // Cualquier excepción después de reservar el saldo (ej. el registro local post-Central
         // falla) tiene que reintegrar la reserva — el Central Bank es la fuente de la verdad y ya
@@ -187,7 +231,7 @@ exports.realizarTransferencia = async (req, res) => {
             }
         }
         console.error("❌ Error en realizarTransferencia:", error.message);
-        res.status(500).json({ error: "Error interno en el servidor", detalle: error.message });
+        return resultado(500, { error: "Error interno en el servidor", detalle: error.message });
     }
 };
 

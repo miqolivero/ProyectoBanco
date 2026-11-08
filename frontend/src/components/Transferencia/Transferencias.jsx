@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Check, FileText, UserPlus, X } from 'lucide-react';
 import SelectorCuenta from '../SelectorCuenta/SelectorCuenta';
+import AdvertenciaCbuNuevo from '../AdvertenciaCbuNuevo/AdvertenciaCbuNuevo';
 import './Transferencias.css';
 import { API_URL } from '../../config/api';
 
@@ -11,6 +12,8 @@ export default function Transferencias({ datosUsuario, cuentas, monedaActiva, on
   const [cargando, setCargando] = useState(false);
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
   const [comprobante, setComprobante] = useState(null);
+  // Advertencia de CBU nuevo: el backend respondió 409 y espera que el usuario confirme.
+  const [advertencia, setAdvertencia] = useState(null);
 
   const cuentaOrigen = cuentas?.find(c => c.moneda === monedaActiva) || cuentas?.[0] || datosUsuario;
 
@@ -72,6 +75,11 @@ export default function Transferencias({ datosUsuario, cuentas, monedaActiva, on
     }
 
     setMensaje({ tipo: '', texto: '' });
+    await enviarTransferencia(false);
+  };
+
+  // confirmarCbuNuevo = true solo cuando el usuario ya vio la advertencia y eligió continuar.
+  const enviarTransferencia = async (confirmarCbuNuevo) => {
     setCargando(true);
 
     try {
@@ -82,11 +90,18 @@ export default function Transferencias({ datosUsuario, cuentas, monedaActiva, on
           cbu_origen: cuentaOrigen.cbu,
           cbu_destino: cbuDestino.trim(),
           monto: Number(monto),
-          concepto
+          concepto,
+          confirmar_cbu_nuevo: confirmarCbuNuevo
         })
       });
 
       const data = await response.json();
+
+      if (response.status === 409 && data.requiereConfirmacion) {
+        setAdvertencia({ mensaje: data.error, nombreDestino: data.nombreDestino });
+        return;
+      }
+      setAdvertencia(null);
 
       if (response.status === 201 || response.status === 200) {
         setComprobante({
@@ -111,6 +126,7 @@ export default function Transferencias({ datosUsuario, cuentas, monedaActiva, on
       }
     } catch (error) {
       console.error('❌ Error de red al transferir:', error);
+      setAdvertencia(null);
       setMensaje({ tipo: 'error', texto: 'Error de red: No se pudo conectar con el servidor.' });
     } finally {
       setCargando(false);
@@ -251,6 +267,16 @@ export default function Transferencias({ datosUsuario, cuentas, monedaActiva, on
             {cargando ? 'Procesando con el Central...' : 'Confirmar Transferencia'}
           </button>
         </form>
+
+        {advertencia && (
+          <AdvertenciaCbuNuevo
+            mensaje={advertencia.mensaje}
+            nombreDestino={advertencia.nombreDestino}
+            procesando={cargando}
+            alConfirmar={() => enviarTransferencia(true)}
+            alCancelar={() => setAdvertencia(null)}
+          />
+        )}
 
         {/* COLUMNA DERECHA: tus propios datos, por si necesitás compartirlos */}
         <div className="transfer-sidebar-right">

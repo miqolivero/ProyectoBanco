@@ -5,8 +5,10 @@ const { exigirCbuPropio } = require('../middlewares/auth');
 // 1. TASA vigente ofrecida por el banco
 exports.obtenerTasa = async (req, res) => {
     try {
-        const tasa = await PlazoFijo.obtenerTasaVigente();
-        res.json(tasa);
+        // Solo la tasa que se ofrece. La referencia de mercado y el margen del banco con los que
+        // se calcula son internos: este endpoint es público y no tiene por qué publicarlos.
+        const { tnaOfrecida, plazosPermitidos } = await PlazoFijo.obtenerTasaVigente();
+        res.json({ tnaOfrecida, plazosPermitidos });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

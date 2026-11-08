@@ -1,9 +1,27 @@
+import { useState } from "react";
 import { SignIn } from "@clerk/clerk-react";
+import { FlaskConical } from "lucide-react";
+import { entrarADemo } from "../../config/demo";
 import logo from "../../assets/LogoMinimalista.png";
 import fondo from "../../assets/screen.png";
 import "./PantallaLogin.css";
 
 export default function PantallaLogin() {
+  // 🎯 Cuenta demo: se entra sin registrarse, con movimientos ya cargados, y nada se guarda.
+  const [entrandoDemo, setEntrandoDemo] = useState(false);
+  const [errorDemo, setErrorDemo] = useState('');
+  const probarDemo = async () => {
+    setEntrandoDemo(true);
+    setErrorDemo('');
+    try {
+      await entrarADemo();
+      window.location.reload();
+    } catch (err) {
+      setErrorDemo(err.message);
+      setEntrandoDemo(false);
+    }
+  };
+
   return (
     <div className="login-container">
 
@@ -83,6 +101,12 @@ export default function PantallaLogin() {
   }}
 />
         </div>
+
+        <button type="button" className="btn-entrar-demo" onClick={probarDemo} disabled={entrandoDemo}>
+          <FlaskConical size={16} /> {entrandoDemo ? 'Abriendo la demo...' : 'Probar la cuenta demo'}
+        </button>
+        <p className="entrar-demo-ayuda">Sin registrarte: con movimientos de ejemplo y sin guardar nada.</p>
+        {errorDemo && <p className="entrar-demo-error">{errorDemo}</p>}
 
         <div className="login-footer">
           <p className="login-footer-copy">© 2024 Calamuchita BANK.<br />Miembro de la Red de Bancos Éticos.</p>

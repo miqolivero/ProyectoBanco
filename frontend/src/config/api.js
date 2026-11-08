@@ -1,6 +1,8 @@
 // URL base del backend. En desarrollo local no hace falta configurar nada: cae en
 // localhost:3001 como siempre. En producción, se define VITE_API_URL en el host del
 // frontend (Vercel, etc.) apuntando al backend ya desplegado — ver frontend/.env.example.
+import { leerDemo, limpiarDemo } from './demo';
+
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 // 🎯 El backend ahora exige un JWT de Clerk válido en cada endpoint que toca cuentas/saldo (ver
@@ -17,6 +19,23 @@ if (typeof window !== 'undefined' && !window.__fetchAutenticadoInstalado) {
     const fetchOriginal = window.fetch.bind(window);
     window.fetch = async (input, init = {}) => {
         const url = typeof input === 'string' ? input : input?.url;
+        // 🎯 Cuenta demo: en vez del token de Clerk viajan el token de la demo y la persona demo
+        // con la que se opera (ver config/demo.js). Si el backend avisa que la demo venció
+        // (410), se vuelve al login.
+        const demo = url && url.startsWith(API_URL) ? leerDemo() : null;
+        if (demo) {
+            init = {
+                ...init,
+                headers: { ...(init.headers || {}), 'x-demo-token': demo.token, 'x-demo-usuario': demo.usuario }
+            };
+            const res = await fetchOriginal(input, init);
+            if (res.status === 410) {
+                limpiarDemo();
+                window.alert('La sesión de demo terminó (se reinicia sola tras unos minutos sin uso). Podés volver a entrar desde el inicio.');
+                window.location.href = '/';
+            }
+            return res;
+        }
         if (url && url.startsWith(API_URL)) {
             try {
                 const token = await window.Clerk?.session?.getToken();

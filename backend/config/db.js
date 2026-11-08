@@ -19,4 +19,21 @@ const pool = new Pool({
   ssl: esBaseLocal ? false : { rejectUnauthorized: false },
 });
 
+// 🎯 Cuenta demo: si la request actual pertenece a una sesión de demo, la consulta va a la
+// conexión de esa sesión (una transacción que nunca se confirma) en vez de al pool. Así ningún
+// modelo necesita saber que existe la demo. Ver config/sandboxDemo.js.
+// `conectarReal` queda expuesto para que la demo pueda pedir su propia conexión al pool.
+const { mundoActual } = require('./sandboxDemo');
+const queryReal = pool.query.bind(pool);
+const conectarReal = pool.connect.bind(pool);
+pool.query = (...args) => {
+  const mundo = mundoActual();
+  return mundo ? mundo.query(...args) : queryReal(...args);
+};
+pool.connect = (...args) => {
+  const mundo = mundoActual();
+  return mundo ? Promise.resolve(mundo.conectar()) : conectarReal(...args);
+};
+pool.conectarReal = conectarReal;
+
 module.exports = pool;

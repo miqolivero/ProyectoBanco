@@ -129,11 +129,6 @@
   vertical-align: middle;
 }
 
-.prest-tasa-detalle {
-  font-size: 12px;
-  opacity: 0.75;
-}
-
 .prest-card {
   background: white;
   border: 1px solid #e5e7eb;
@@ -315,6 +310,27 @@
   align-items: center;
   padding-top: 12px;
   border-top: 1px dashed #d1d5db;
+}
+
+/* Cuota vencida e impaga: antes se veía idéntica a una al día, así que el cliente no se
+   enteraba de que estaba en mora hasta que lo llamaban del banco. */
+.prest-proxima-cuota.vencida .prest-cuota-vencimiento {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.prest-badge-vencida {
+  display: inline-block;
+  margin-left: 8px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  vertical-align: middle;
 }
 
 .prest-cuota-label {

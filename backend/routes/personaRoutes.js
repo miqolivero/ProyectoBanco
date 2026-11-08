@@ -12,6 +12,8 @@ const { requireAuth, requireGerente } = require('../middlewares/auth');
 // bajarse la base entera. El frontend no la usa: el panel de gerente tiene su propio endpoint.
 router.get('/', requireAuth, requireGerente, personaController.obtenerPersonas);
 router.post('/', personaController.crearPersona);
+// Pública: el formulario de registro la necesita antes de que exista la persona.
+router.get('/provincias', personaController.obtenerProvincias);
 router.get('/:id/roles', requireAuth, personaController.obtenerRoles);
 router.get('/:id/productos', requireAuth, personaController.obtenerProductos);
 router.get('/:id/cuenta-usd', requireAuth, personaController.obtenerCuentaUSD);
@@ -24,5 +26,8 @@ router.put('/:cbu/alias', requireAuth, personaController.cambiarAlias);
 
 // AJUSTES DE PERFIL: email / teléfono / dirección
 router.put('/:id/perfil', requireAuth, personaController.actualizarPerfil);
+
+// Provincia (y dirección) para las cuentas viejas que todavía no la tienen cargada
+router.put('/:id/domicilio', requireAuth, personaController.completarDomicilio);
 
 module.exports = router;

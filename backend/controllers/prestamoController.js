@@ -6,8 +6,10 @@ const { exigirCbuPropio } = require('../middlewares/auth');
 // anterior en tiempo y forma, se le muestra la tasa sin el spread (ver Prestamo.tieneBuenHistorial).
 exports.obtenerTasa = async (req, res) => {
     try {
-        const tasa = await Prestamo.obtenerTasaVigente(req.personaAutenticada.id);
-        res.json(tasa);
+        // Solo la tasa y si está bonificada. Cómo se compone (referencia de mercado + margen del
+        // banco) es información interna que el cliente no necesita ver.
+        const { tnaOfrecida, bonificado, plazosPermitidos } = await Prestamo.obtenerTasaVigente(req.personaAutenticada.id);
+        res.json({ tnaOfrecida, bonificado, plazosPermitidos });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -21,7 +23,7 @@ exports.simular = async (req, res) => {
         return res.status(400).json({ error: 'Faltan datos obligatorios (monto, plazo_meses).' });
     }
     try {
-        const { tnaOfrecida, bonificado } = await Prestamo.obtenerTasaVigente(req.personaAutenticada.id);
+        const { tnaOfrecida, bonificado, plazosPermitidos } = await Prestamo.obtenerTasaVigente(req.personaAutenticada.id);
         const simulacion = Prestamo.simularAmortizacion(Number(monto), Number(plazo_meses), tnaOfrecida);
         res.json({ tna: tnaOfrecida, bonificado, ...simulacion });
     } catch (error) {

@@ -113,8 +113,11 @@ CREATE TABLE IF NOT EXISTS Movimientos (
 -- es lo que realmente lo impide si la aplicación falla. Parcial (solo NOT NULL) porque los
 -- movimientos 100% locales (depósito, recarga, etc.) dejan id_transaccion_central en NULL y no
 -- deben competir entre sí por unicidad.
-CREATE UNIQUE INDEX IF NOT EXISTS idx_movimientos_id_transaccion_central_unico
-    ON Movimientos (id_transaccion_central)
+-- Es único POR CUENTA: en una transferencia entre dos cuentas de este banco, la pata enviada y
+-- la recibida comparten el id del Central y tienen que poder existir las dos (ver
+-- 04_cobros_eventos.sql, que migra las bases creadas con el índice global anterior).
+CREATE UNIQUE INDEX IF NOT EXISTS idx_movimientos_id_central_por_cuenta
+    ON Movimientos (id_transaccion_central, id_cuenta)
     WHERE id_transaccion_central IS NOT NULL;
 
 -- 11. DATOS INICIALES PARA MOVIMIENTOS

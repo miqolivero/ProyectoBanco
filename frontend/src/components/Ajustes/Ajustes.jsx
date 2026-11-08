@@ -1,14 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AlertTriangle, CheckCircle2, User, Save } from 'lucide-react';
 import './Ajustes.css';
 import { API_URL } from '../../config/api';
+import { obtenerProvincias } from '../../config/provincias';
 
 export default function Ajustes({ datosUsuario, alActualizarExitoso, alCancelar }) {
   const [email, setEmail] = useState(datosUsuario?.email || '');
   const [telefono, setTelefono] = useState(datosUsuario?.telefono || '');
   const [direccion, setDireccion] = useState(datosUsuario?.direccion || '');
+  const [provincia, setProvincia] = useState(datosUsuario?.provincia || '');
+  const [provincias, setProvincias] = useState([]);
   const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
+
+  useEffect(() => {
+    let cancelado = false;
+    obtenerProvincias()
+      .then(lista => { if (!cancelado) setProvincias(lista); })
+      .catch(err => { if (!cancelado) setMensaje({ tipo: 'error', texto: err.message }); });
+    return () => { cancelado = true; };
+  }, []);
 
   const formatearFecha = (stringFecha) => {
     if (!stringFecha) return '---';
@@ -26,7 +37,7 @@ export default function Ajustes({ datosUsuario, alActualizarExitoso, alCancelar 
       const response = await fetch(`${API_URL}/api/personas/${datosUsuario.id}/perfil`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), telefono: telefono.trim(), direccion: direccion.trim() })
+        body: JSON.stringify({ email: email.trim(), telefono: telefono.trim(), direccion: direccion.trim(), provincia })
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'No se pudieron guardar los cambios.');
@@ -86,6 +97,20 @@ export default function Ajustes({ datosUsuario, alActualizarExitoso, alCancelar 
                 onChange={(e) => setDireccion(e.target.value)}
                 disabled={guardando}
               />
+            </div>
+
+            <div className="ajustes-field">
+              <label>Provincia</label>
+              <select
+                className="ajustes-input-text"
+                value={provincia}
+                onChange={(e) => setProvincia(e.target.value)}
+                disabled={guardando || provincias.length === 0}
+                required
+              >
+                <option value="" disabled>Elegí tu provincia</option>
+                {provincias.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
             </div>
 
             {mensaje.texto && (

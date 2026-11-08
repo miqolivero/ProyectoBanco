@@ -25,6 +25,17 @@ export default function Prestamos({ datosUsuario, alSolicitarExitoso, alPagarExi
     return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(valor || 0);
   };
 
+  // Mismo formato argentino que la plata (coma decimal) y siempre 2 decimales: antes el banner
+  // mostraba "80.45%" y la lista "83.836%", con punto y con distinta precisión.
+  const formatearTasa = (valor) =>
+    `${new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(valor) || 0)}%`;
+
+  // Una cuota está vencida si su fecha ya pasó (la del día de hoy todavía no). Es el mismo
+  // criterio que usa el panel de gerencia para calcular la mora.
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  const estaVencida = (fecha) => new Date(fecha) < hoy;
+
   const cargarTasa = async () => {
     try {
       const response = await fetch(`${API_URL}/api/prestamos/tasa`);
@@ -178,16 +189,13 @@ export default function Prestamos({ datosUsuario, alSolicitarExitoso, alPagarExi
           <span>Consultando tasa vigente...</span>
         ) : tasa ? (
           <>
+            {/* Solo la tasa: cómo se calcula (referencia de mercado + margen del banco) es
+                información interna y no se le muestra al cliente. */}
             <div>
-              <span className="prest-tasa-label">TNA que cobra el banco</span>
-              <strong className="prest-tasa-valor">{tasa.tnaOfrecida}%</strong>
+              <span className="prest-tasa-label">Tasa nominal anual (TNA)</span>
+              <strong className="prest-tasa-valor">{formatearTasa(tasa.tnaOfrecida)}</strong>
               {tasa.bonificado && <span className="prest-tasa-badge">Tasa bonificada</span>}
             </div>
-            <span className="prest-tasa-detalle">
-              {tasa.bonificado
-                ? `Tasa de referencia de mercado: ${tasa.tasaReferencia}% (promedio de ~25 entidades, ArgentinaDatos), sin spread — ya pagaste un préstamo anterior en tiempo y forma, así que no te cobramos el adicional del banco.`
-                : `Tasa de referencia de mercado: ${tasa.tasaReferencia}% (promedio de ~25 entidades, ArgentinaDatos) + ${tasa.spreadBps} bps`}
-            </span>
           </>
         ) : (
           <span>No se pudo obtener la tasa vigente en este momento.</span>
@@ -258,13 +266,18 @@ export default function Prestamos({ datosUsuario, alSolicitarExitoso, alPagarExi
                 <strong>{formatearMoneda(p.monto)}</strong>
                 <span className={`prest-badge-estado ${p.estado === 'PAGADO' ? 'pagado' : 'activo'}`}>{p.estado}</span>
               </div>
-              <span className="prest-item-detalle">TNA {p.tna}% · {p.plazo_meses} cuotas de {formatearMoneda(p.cuota_fija)}</span>
+              <span className="prest-item-detalle">TNA {formatearTasa(p.tna)} · {p.plazo_meses} cuotas de {formatearMoneda(p.cuota_fija)}</span>
 
               {p.proximaCuota && (
-                <div className="prest-proxima-cuota">
+                <div className={`prest-proxima-cuota ${estaVencida(p.proximaCuota.fecha_vencimiento) ? 'vencida' : ''}`}>
                   <div>
-                    <span className="prest-cuota-label">Próxima cuota ({p.proximaCuota.numero}/{p.plazo_meses})</span>
-                    <span className="prest-cuota-vencimiento">Vence {new Date(p.proximaCuota.fecha_vencimiento).toLocaleDateString('es-AR')}</span>
+                    <span className="prest-cuota-label">
+                      Próxima cuota ({p.proximaCuota.numero}/{p.plazo_meses})
+                      {estaVencida(p.proximaCuota.fecha_vencimiento) && <span className="prest-badge-vencida">Vencida</span>}
+                    </span>
+                    <span className="prest-cuota-vencimiento">
+                      {estaVencida(p.proximaCuota.fecha_vencimiento) ? 'Venció el' : 'Vence'} {new Date(p.proximaCuota.fecha_vencimiento).toLocaleDateString('es-AR')}
+                    </span>
                   </div>
                   <div className="prest-cuota-accion">
                     <span className="prest-cuota-monto">{formatearMoneda(p.proximaCuota.cuota)}</span>

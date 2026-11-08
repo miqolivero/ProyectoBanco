@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const { esMontoPositivo } = require('../utils/validaciones');
+const Cobro = require('./cobroModel');
 
 // Tope diario de ingreso de dinero (depósitos), por moneda de la cuenta. Pedido explícito:
 // $10.000.000 ARS y US$5.000 por día. Se mide sobre la suma de depósitos (tipo CREDITO,
@@ -52,6 +53,24 @@ class Movimiento {
         const res = await pool.query(
             'UPDATE Cuentas_Bancarias SET saldo = saldo - $1 WHERE cbu = $2 AND saldo >= $1 RETURNING saldo',
             [monto, cbu.trim()]
+        );
+        return res.rows.length > 0;
+    }
+
+    // ¿Alguna de estas cuentas (todas las de una misma persona) le transfirió alguna vez a este
+    // CBU? Sale del historial que ya existe, sin tabla aparte de "destinatarios conocidos". Usa
+    // el índice idx_movimientos_origen_destino (ver init/04_cobros_eventos.sql).
+    static async yaTransfirioA(cbusOrigen, cbuDestino) {
+        if (!cbusOrigen?.length || !cbuDestino) return false;
+        const res = await pool.query(
+            `SELECT 1
+             FROM movimientos m
+             JOIN tipos_movimiento tm ON tm.id_tipo_movimiento = m.id_tipo_movimiento
+             WHERE m.cbu_origen = ANY($1::varchar[])
+               AND m.cbu_destino = $2
+               AND tm.nombre = 'TRANSFERENCIA_ENVIADA'
+             LIMIT 1`,
+            [cbusOrigen, String(cbuDestino).trim()]
         );
         return res.rows.length > 0;
     }
@@ -130,15 +149,22 @@ class Movimiento {
     }
 
     // 3. VERIFICAR SI YA EXISTE
+    // 🐛 Se busca el ingreso en la cuenta DESTINO, no cualquier movimiento con ese id. En una
+    // transferencia entre dos cuentas de este banco las dos patas comparten el id del Central
+    // (la enviada lo guarda desde que se toma de la respuesta de POST /transactions): buscando
+    // solo por id, la pata enviada hacía creer que el ingreso ya estaba y el destinatario nunca
+    // recibía la plata en la base local.
     static async verificarExistenciaCentral(t) {
-        const idCentral = t._id || t.id; 
+        const idCentral = t._id || t.id;
         if (!idCentral) return false;
 
         const query = `
-            SELECT id_movimiento FROM movimientos 
-            WHERE id_transaccion_central = $1
+            SELECT m.id_movimiento
+            FROM movimientos m
+            JOIN Cuentas_Bancarias c ON c.id_cuenta = m.id_cuenta
+            WHERE m.id_transaccion_central = $1 AND c.cbu = $2
         `;
-        const res = await pool.query(query, [idCentral]);
+        const res = await pool.query(query, [idCentral, t.cbuDestino]);
         return res.rows.length > 0;
     }
 
@@ -187,6 +213,11 @@ class Movimiento {
                     t.cbuDestino,
                     idCentral
                 ]);
+
+                // Si este ingreso es el pago de un cobro con QR que paga comisión, se debita acá,
+                // en la misma transacción que acredita la plata (así el saldo del comercio nunca
+                // queda en negativo por la comisión). Ver Cobro.debitarComision.
+                await Cobro.debitarComision(client, idCentral);
             }
 
             await client.query('COMMIT');
@@ -194,7 +225,7 @@ class Movimiento {
         } catch (error) {
             await client.query('ROLLBACK');
             // 23505 = violación de unique constraint. Con el índice único sobre
-            // id_transaccion_central (ver init/01_schema.sql), esto significa que otro pedido de
+            // (id_transaccion_central, id_cuenta) (ver init/04_cobros_eventos.sql), esto significa que otro pedido de
             // sincronización concurrente (dos pestañas, o el propio reintento del polling) ya
             // insertó esta misma transferencia externa un instante antes — no es un error real,
             // es exactamente el caso que el índice existe para frenar. No hay nada que acreditar

@@ -1,7 +1,16 @@
 const pool = require('../config/db');
+const { PROVINCIA_BONIFICADA } = require('../utils/provincias');
+const { SQL_HOY } = require('../utils/fechas');
+const { MANTENIMIENTO_NETO, IVA_PORCENTAJE } = require('../utils/costos');
 
 // Nombre del rol (tabla Roles) que habilita el panel de gerencia.
 const ROL_GERENTE = 'Gerente';
+
+// 🎯 La bonificación de mantenimiento se decide UNA sola vez, al crear la cuenta (ver create):
+// cambiar la provincia después no la quita ni la da. Ni quien se muda fuera de Córdoba la
+// pierde, ni quien se muda a Córdoba (o completa la provincia de una cuenta vieja) la gana.
+// Por eso actualizarDatosContacto y completarDomicilio tocan solo la provincia, nunca las
+// columnas bonif_mantenimiento_*.
 
 class Persona {
     // Sin clerk_id: es el identificador interno de autenticación, nadie lo necesita en un listado.
@@ -28,7 +37,15 @@ class Persona {
             JOIN Productos prod ON prod.id_persona = p.id
             JOIN Cuentas_Bancarias cb ON cb.id_producto = prod.id_producto
             WHERE p.clerk_id = $1
+            ORDER BY (cb.moneda = 'ARS') DESC, cb.id_cuenta
+            LIMIT 1
         `;
+        // 🎯 El ORDER BY no es cosmético. Con cuenta en pesos y en dólares el JOIN devuelve dos
+        // filas, y el frontend toma esta como la "cuenta principal" (datosUsuario.cbu, que usan
+        // plazos fijos, préstamos, servicios, tarjetas...). Sin orden explícito, cuál sale primera
+        // depende del plan que elija Postgres: hoy arranca por Productos y sale la de pesos, pero
+        // con un hash join —el plan que elige cuando las tablas crecen— sale primero la de dólares.
+        // Se comprobó forzando ese plan. La principal es siempre la de pesos.
         const res = await pool.query(query, [clerkId, ROL_GERENTE]);
         return res.rows.length > 0 ? res.rows[0] : null;
     }
@@ -102,18 +119,22 @@ class Persona {
 
     // MODIFICADO: Ahora recibe y guarda el clerkId
     static async create(datos) {
-        const { nombre, apellido, dni, email, telefono, fecha_nacimiento, direccion, alias, cbu, clerkId } = datos;
+        const { nombre, apellido, dni, email, telefono, fecha_nacimiento, direccion, provincia, alias, cbu, clerkId } = datos;
         const client = await pool.connect();
         try {
             await client.query('BEGIN');
-            
-            // Agregamos clerk_id al INSERT
+
+            // Agregamos clerk_id al INSERT. Si la cuenta se abre con domicilio en Córdoba, la
+            // bonificación de mantenimiento arranca hoy y dura 12 meses desde el alta.
             const queryPersona = `
-                INSERT INTO Personas (nombre, apellido, dni, email, telefono, fecha_nac, direccion, clerk_id) 
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+                INSERT INTO Personas (nombre, apellido, dni, email, telefono, fecha_nac, direccion, clerk_id,
+                                      provincia, bonif_mantenimiento_desde, bonif_mantenimiento_hasta)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::varchar,
+                        CASE WHEN $9::varchar = '${PROVINCIA_BONIFICADA}' THEN ${SQL_HOY} END,
+                        CASE WHEN $9::varchar = '${PROVINCIA_BONIFICADA}' THEN (${SQL_HOY} + INTERVAL '12 months')::date END)
                 RETURNING id;
             `;
-            const resPersona = await client.query(queryPersona, [nombre, apellido, dni, email, telefono, fecha_nacimiento, direccion, clerkId]);
+            const resPersona = await client.query(queryPersona, [nombre, apellido, dni, email, telefono, fecha_nacimiento, direccion, clerkId, provincia]);
             const personaId = resPersona.rows[0].id;
 
             const resProducto = await client.query(
@@ -199,15 +220,56 @@ class Persona {
     // Actualiza los datos de contacto de la persona (Ajustes de perfil). A propósito NO incluye
     // nombre/apellido/dni: esos están registrados en el Banco Central junto con el CBU, y
     // cambiarlos ahí requeriría sincronizar con la red — fuera de alcance de esta pantalla.
-    static async actualizarDatosContacto(id, { email, telefono, direccion }) {
+    // La provincia es parte del domicilio. Cambiarla no toca la bonificación (ver arriba).
+    static async actualizarDatosContacto(id, { email, telefono, direccion, provincia }) {
         const query = `
             UPDATE Personas
-            SET email = $1, telefono = $2, direccion = $3
+            SET email = $1, telefono = $2, direccion = $3, provincia = $5
             WHERE id = $4
-            RETURNING id, nombre, apellido, dni, email, telefono, direccion, fecha_nac;
+            RETURNING id, nombre, apellido, dni, email, telefono, direccion, provincia, fecha_nac;
         `;
-        const res = await pool.query(query, [email, telefono, direccion, id]);
+        const res = await pool.query(query, [email, telefono, direccion, id, provincia]);
         return res.rows.length > 0 ? res.rows[0] : null;
+    }
+
+    // Para las cuentas creadas antes de que la provincia fuera obligatoria: la completan en el
+    // próximo ingreso (pantalla CompletarProvincia), junto con la dirección si no la tenían.
+    static async completarDomicilio(id, { direccion, provincia }) {
+        const query = `
+            UPDATE Personas
+            SET direccion = COALESCE($2, direccion), provincia = $3
+            WHERE id = $1
+            RETURNING id, direccion, provincia;
+        `;
+        const res = await pool.query(query, [id, direccion, provincia]);
+        return res.rows.length > 0 ? res.rows[0] : null;
+    }
+
+    // Fechas como texto ('YYYY-MM-DD'): pg convierte los DATE a un Date en la zona del servidor,
+    // y eso puede correr el día. "vigente" se evalúa con la fecha de hoy en Córdoba.
+    static async obtenerBonificacion(id) {
+        const res = await pool.query(
+            `SELECT provincia,
+                    bonif_mantenimiento_desde::text AS desde,
+                    bonif_mantenimiento_hasta::text AS hasta,
+                    COALESCE(bonif_mantenimiento_hasta >= ${SQL_HOY}, false) AS vigente
+             FROM Personas WHERE id = $1`,
+            [id]
+        );
+        return res.rows.length > 0 ? res.rows[0] : null;
+    }
+
+    // Mantenimiento mensual: neto + IVA, en NUMERIC. Es el mismo para todas las cuentas no
+    // bonificadas (ver utils/costos.js).
+    static async costoMantenimiento() {
+        const res = await pool.query(
+            `SELECT $1::numeric(15, 2) AS neto,
+                    $2::numeric AS porcentaje_iva,
+                    ROUND($1::numeric * $2::numeric / 100, 2)::numeric(15, 2) AS iva,
+                    ($1::numeric + ROUND($1::numeric * $2::numeric / 100, 2))::numeric(15, 2) AS total`,
+            [MANTENIMIENTO_NETO, IVA_PORCENTAJE]
+        );
+        return res.rows[0];
     }
 }
 

@@ -8,6 +8,7 @@
 // controllers puedan comparar contra eso en vez de confiar en el body.
 const { clerkMiddleware, getAuth } = require('@clerk/express');
 const Persona = require('../models/personaModel');
+const { USUARIOS_DEMO, obtenerMundo } = require('../config/sandboxDemo');
 
 // 🎯 @clerk/express (v2) necesita TANTO la Secret Key como la Publishable Key para poder
 // verificar un token — si falta cualquiera de las dos, clerkMiddleware() tira una excepción
@@ -42,6 +43,18 @@ const clerkAttach = CLERK_LISTO
 // autenticada no tiene registro local todavía. Deja `req.personaAutenticada` = { id, dni,
 // nombre, apellido, cbus: [{cbu, moneda}] } para que el controller lo use.
 async function requireAuth(req, res, next) {
+    // Sesión de demo: la identidad es la persona demo elegida (ver demoAttach), no Clerk.
+    if (req.demo) {
+        try {
+            const identidad = await Persona.getIdentidadCompleta(req.demo.usuario);
+            if (!identidad) return res.status(503).json({ error: 'La cuenta demo no está cargada en la base (falta correr init/06_cuenta_demo.sql).' });
+            req.personaAutenticada = identidad;
+            return next();
+        } catch (error) {
+            console.error('❌ Error verificando la sesión demo:', error.message);
+            return res.status(500).json({ error: 'No se pudo verificar la sesión.' });
+        }
+    }
     if (!CLERK_LISTO) {
         return res.status(503).json({ error: 'El servidor no tiene la autenticación configurada todavía.' });
     }
@@ -118,6 +131,7 @@ function exigirPersonaPropia(req, res, idPersona) {
 // sesión actual, o null si no hay sesión válida (incluida la config incompleta de Clerk) — nunca
 // tira una excepción hacia afuera, así el controller solo hace `if (!userId) return 401`.
 function obtenerUserIdSesion(req) {
+    if (req.demo) return req.demo.usuario;
     if (!CLERK_LISTO) return null;
     try {
         return getAuth(req).userId || null;
@@ -126,4 +140,23 @@ function obtenerUserIdSesion(req) {
     }
 }
 
-module.exports = { clerkAttach, requireAuth, requireGerente, exigirCbuPropio, exigirPersonaPropia, obtenerUserIdSesion };
+// 🎯 Cuenta demo: si la request trae el token de una sesión de demo, se identifica como la
+// persona demo indicada y TODA la request corre dentro del "mundo" de esa sesión (una
+// transacción que nunca se confirma, ver config/sandboxDemo.js). Se monta global en app.js,
+// después de clerkAttach. Sin el header, no hace nada.
+function demoAttach(req, res, next) {
+    const token = req.headers['x-demo-token'];
+    if (!token) return next();
+    const mundo = obtenerMundo(String(token));
+    if (!mundo) {
+        return res.status(410).json({ error: 'La sesión de demo terminó (se reinicia tras unos minutos sin uso). Volvé a entrar.', codigo: 'DEMO_EXPIRADA' });
+    }
+    const usuario = String(req.headers['x-demo-usuario'] || '');
+    if (!USUARIOS_DEMO.includes(usuario)) {
+        return res.status(400).json({ error: 'Usuario de demo inválido.' });
+    }
+    req.demo = { usuario };
+    mundo.ejecutar(req, res, next);
+}
+
+module.exports = { clerkAttach, demoAttach, requireAuth, requireGerente, exigirCbuPropio, exigirPersonaPropia, obtenerUserIdSesion };

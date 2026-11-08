@@ -1,0 +1,516 @@
+.cobrar-container {
+  padding: 12px 0;
+  max-width: 1000px;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.cobrar-eyebrow {
+  display: block;
+  font-size: 12.5px;
+  font-style: italic;
+  color: #0f3424;
+  opacity: 0.6;
+  margin-bottom: 6px;
+}
+
+.cobrar-header-box h2 {
+  font-size: 24px;
+  color: #111827;
+  margin: 0 0 4px 0;
+}
+
+.cobrar-header-box p {
+  color: #1a5c3f;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  background: linear-gradient(90deg, #eefdf4, rgba(238, 253, 244, 0));
+  border-left: 3px solid #2e7d4f;
+  padding: 8px 14px;
+  border-radius: 0 8px 8px 0;
+  margin: 0 0 28px 0;
+}
+
+.cobrar-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 24px;
+  align-items: start;
+}
+
+.cobrar-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+}
+
+/* Formulario */
+.cobrar-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cobrar-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cobrar-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.cobrar-input-text {
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 16px; /* 16px: en iOS, menos que eso hace zoom al enfocar el campo */
+  outline: none;
+  color: #111827;
+  background-color: white;
+  transition: border-color 0.2s;
+}
+
+.cobrar-input-text:focus {
+  border-color: #0f3424;
+  box-shadow: 0 0 0 3px rgba(15, 52, 36, 0.1);
+}
+
+.cobrar-monto-wrapper {
+  display: flex;
+  align-items: center;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  transition: border-color 0.2s;
+}
+
+.cobrar-monto-wrapper:focus-within {
+  border-color: #0f3424;
+  box-shadow: 0 0 0 3px rgba(15, 52, 36, 0.1);
+}
+
+.cobrar-currency-prefix {
+  padding-left: 14px;
+  font-size: 22px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.cobrar-input-monto {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 14px 14px 6px;
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  font-weight: 600;
+  outline: none;
+  color: #111827;
+}
+
+.cobrar-nota {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #6b7280;
+}
+
+.cobrar-nota svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: #2e7d4f;
+}
+
+/* QR abierto */
+.cobrar-qr-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.cobrar-qr-marco {
+  padding: 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: white;
+  box-shadow: 0 10px 25px -10px rgba(15, 52, 36, 0.25);
+  margin-bottom: 20px;
+  line-height: 0;
+}
+
+.cobrar-qr-marco svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.cobrar-qr-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.cobrar-qr-monto {
+  margin: 4px 0 0 0;
+  font-size: 32px;
+  font-weight: 700;
+  color: #0f3424;
+}
+
+.cobrar-qr-descripcion {
+  margin: 6px 0 0 0;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.cobrar-promo-aviso {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 380px;
+  margin-top: 18px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.cobrar-promo-aviso svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.cobrar-estado-espera {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #b45309;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  padding: 8px 14px;
+  border-radius: 999px;
+}
+
+.cobrar-spinner {
+  animation: cobrar-girar 1s linear infinite;
+}
+
+@keyframes cobrar-girar {
+  to { transform: rotate(360deg); }
+}
+
+/* Resultado (cobrado / cancelado) */
+.cobrar-resultado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 12px 0;
+}
+
+.cobrar-resultado-icono {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.cobrar-resultado.exito .cobrar-resultado-icono {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.cobrar-resultado.cancelado .cobrar-resultado-icono {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.cobrar-resultado h3 {
+  margin: 0;
+  font-size: 22px;
+  color: #111827;
+}
+
+.cobrar-resultado-monto {
+  margin: 8px 0 4px 0;
+  font-size: 34px;
+  font-weight: 700;
+  color: #0f3424;
+}
+
+.cobrar-resultado-detalle {
+  margin: 4px 0 0 0;
+  font-size: 13.5px;
+  color: #6b7280;
+  max-width: 360px;
+}
+
+.cobrar-resultado .btn-cob-principal {
+  margin-top: 22px;
+}
+
+/* Alertas */
+.cobrar-alert {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.cobrar-qr-box .cobrar-alert {
+  margin-top: 16px;
+}
+
+.cobrar-alert.error {
+  background-color: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+/* Acciones */
+.cobrar-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.cobrar-actions.centradas {
+  justify-content: center;
+  margin-top: 22px;
+  flex-wrap: wrap;
+}
+
+.btn-cob-principal,
+.btn-cob-secundario,
+.btn-cob-peligro {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 22px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: opacity 0.2s, background-color 0.2s;
+}
+
+.btn-cob-principal {
+  background-color: #0f3424;
+  color: white;
+  border: none;
+}
+
+.btn-cob-secundario {
+  background-color: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #d1d5db;
+}
+
+.btn-cob-secundario:hover:not(:disabled) {
+  background-color: #e5e7eb;
+}
+
+.btn-cob-peligro {
+  background-color: white;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+}
+
+.btn-cob-peligro:hover:not(:disabled) {
+  background-color: #fef2f2;
+}
+
+.btn-cob-principal:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btn-cob-principal:disabled,
+.btn-cob-secundario:disabled,
+.btn-cob-peligro:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Panel de cobros recientes */
+.cobrar-info-panel {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+}
+
+.cobrar-info-panel h4 {
+  margin: 0 0 14px 0;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 15px;
+  color: #111827;
+}
+
+.cobrar-info-vacio {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.cobrar-recientes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cobrar-reciente-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #f3f4f6;
+  border-radius: 8px;
+  background: white;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.cobrar-reciente-item:hover:not(:disabled) {
+  border-color: #d1d5db;
+  background: #f9fafb;
+}
+
+.cobrar-reciente-item:disabled {
+  cursor: default;
+}
+
+.cobrar-reciente-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cobrar-reciente-info strong {
+  font-size: 14px;
+  color: #111827;
+}
+
+.cobrar-reciente-info span {
+  font-size: 12px;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cobrar-badge {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.cobrar-badge.pendiente,
+.cobrar-badge.procesando {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.cobrar-badge.pagado {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.cobrar-badge.cancelado {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 900px) {
+  .cobrar-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .cobrar-card {
+    padding: 22px 18px;
+  }
+
+  .cobrar-actions {
+    flex-direction: column-reverse;
+  }
+
+  .cobrar-actions.centradas {
+    flex-direction: column;
+    width: 100%;
+  }
+}
+
+/* Resumen del mes del comercio (cobrado, tramo sin comisión y límite) */
+.cobrar-mes {
+  margin: -4px -4px 20px -4px;
+  padding: 16px;
+  border-radius: 10px;
+  background: var(--primary-gradient, linear-gradient(135deg, #0f3424 0%, #1e5238 100%));
+  color: white;
+}
+
+.cobrar-mes-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.cobrar-mes-monto {
+  margin: 4px 0 6px 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.cobrar-mes-detalle {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  opacity: 0.85;
+}

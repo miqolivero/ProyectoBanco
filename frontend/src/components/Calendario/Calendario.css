@@ -1,0 +1,236 @@
+.calendario-container {
+  padding: 12px 0;
+  max-width: 1000px;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.calendario-eyebrow {
+  display: block;
+  font-size: 12.5px;
+  font-style: italic;
+  color: #0f3424;
+  opacity: 0.6;
+  margin-bottom: 6px;
+}
+
+.calendario-header-box h2 {
+  font-size: 24px;
+  color: #111827;
+  margin: 0 0 4px 0;
+}
+
+.calendario-header-box p {
+  color: #1a5c3f;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  background: linear-gradient(90deg, #eefdf4, rgba(238, 253, 244, 0));
+  border-left: 3px solid #2e7d4f;
+  padding: 8px 14px;
+  border-radius: 0 8px 8px 0;
+  margin: 0 0 28px 0;
+}
+
+.calendario-vacio {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.calendario-lista {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 20px;
+}
+
+.calendario-evento {
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 22px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+}
+
+.calendario-evento.vigente {
+  border-color: #86efac;
+  box-shadow: 0 10px 25px -12px rgba(46, 125, 79, 0.35);
+}
+
+.calendario-evento-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.calendario-chip {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+
+.calendario-chip.vigente {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.calendario-chip.proximo {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.calendario-descuento {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f3424;
+}
+
+.calendario-descuento em {
+  font-style: normal;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.calendario-evento h3 {
+  margin: 14px 0 8px 0;
+  font-size: 18px;
+  color: #111827;
+}
+
+.calendario-dato {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px 0;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.calendario-dato svg {
+  flex-shrink: 0;
+  color: #2e7d4f;
+}
+
+.calendario-adheridos {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #f3f4f6;
+  flex-grow: 1;
+}
+
+.calendario-adheridos-titulo {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.calendario-adheridos ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.calendario-adheridos li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 13px;
+  color: #111827;
+}
+
+.calendario-adheridos li svg {
+  color: #2e7d4f;
+}
+
+.calendario-adheridos li span {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.calendario-adheridos-vacio {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.btn-cal-sumarme {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px dashed #d1d5db;
+  background: #f9fafb;
+  color: #6b7280;
+  font-weight: 600;
+  font-size: 13.5px;
+  cursor: not-allowed;
+}
+
+.calendario-pronto {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: #fef3c7;
+  color: #92400e;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+.calendario-alert {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  background-color: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.calendario-volver {
+  margin-top: 24px;
+}
+
+.btn-cal-secundario {
+  background-color: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #d1d5db;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.btn-cal-secundario:hover {
+  background-color: #e5e7eb;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
