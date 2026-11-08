@@ -6,7 +6,7 @@ import {
   TrendingUp, TrendingDown, Landmark, BarChart3, History, Settings, User, LogOut,
   Eye, EyeOff, Pencil, Check, X, DollarSign, Send, Download, Briefcase, Plus,
   ChevronDown, ChevronRight, Layers, CalendarRange, Hash, Bot, ShieldCheck,
-  QrCode, PartyPopper, PiggyBank, BadgeCheck
+  QrCode, PartyPopper, PiggyBank, BadgeCheck, Sparkles
 } from 'lucide-react';
 import logo from "../../assets/LogoMinimalista.png";
 import Transferencias from '../Transferencia/Transferencias';
@@ -586,6 +586,39 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
             <Home size={18} /> Inicio
           </button>
 
+          {/* 🎯 Cuentas: acceso directo a la cuenta en pesos y a la de dólares (abre el Inicio
+              mostrando esa cuenta, igual que elegirla en "Mis Productos"). */}
+          <div className="menu-group">
+            <button
+              className="menu-group-header"
+              onClick={() => toggleGrupoMenu('cuentas')}
+              aria-expanded={grupoAbierto === 'cuentas'}
+            >
+              <span className="menu-group-label"><Landmark size={18} /> Cuentas</span>
+              {grupoAbierto === 'cuentas' ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+            </button>
+            <div className={`menu-group-items ${grupoAbierto === 'cuentas' ? 'abierto' : ''}`}>
+              <button
+                className={`menu-item sub ${vistaActual === 'inicio' && monedaActiva === 'ARS' ? 'active' : ''}`}
+                onClick={() => { setMonedaActiva('ARS'); setVistaActual('inicio'); }}
+              >
+                Cuenta en pesos
+              </button>
+              {cuentaUSD ? (
+                <button
+                  className={`menu-item sub ${vistaActual === 'inicio' && monedaActiva === 'USD' ? 'active' : ''}`}
+                  onClick={() => { setMonedaActiva('USD'); setVistaActual('inicio'); }}
+                >
+                  Cuenta en dólares
+                </button>
+              ) : (
+                <button className="menu-item sub" onClick={() => { setVistaActual('inicio'); handleAbrirCuentaUSD(); }} disabled={abriendoCuentaUSD}>
+                  {abriendoCuentaUSD ? 'Abriendo...' : '+ Abrir cuenta en dólares'}
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* 🎯 Solo se muestra a quien tiene el rol Gerente. Ocultarlo es una cortesía de interfaz,
               no la seguridad: aunque alguien fuerce la vista, el backend responde 403 a
               /api/admin/* si la sesión no es de un gerente (ver requireGerente). */}
@@ -618,21 +651,11 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
             <History size={18} /> Historial
           </button>
 
-          {COBROS_QR_HABILITADOS ? (
+          {COBROS_QR_HABILITADOS && (
             <button className={`menu-item ${vistaActual === 'cobrar' ? 'active' : ''}`} onClick={() => setVistaActual('cobrar')}>
               <QrCode size={18} /> Cobrar con QR
             </button>
-          ) : (
-            <button className="menu-item disabled" disabled title="Muy pronto vas a poder cobrar y pagar con QR">
-              <QrCode size={18} /> Cobrar con QR <span className="menu-badge-pronto">Próximamente</span>
-            </button>
           )}
-
-          {/* 🎯 Calendario de beneficios / descuentos por evento: todavía no se ofrece (el backend
-              lo tiene apagado, ver backend/config/funcionalidades.js). */}
-          <button className="menu-item disabled" disabled title="Muy pronto: descuentos pagando con QR en las fiestas de la región">
-            <PartyPopper size={18} /> Beneficios <span className="menu-badge-pronto">Próximamente</span>
-          </button>
 
           <div className="menu-group">
             <button
@@ -703,6 +726,29 @@ export default function InicioBanco({ datosUsuario, actualizarDatosBase }) {
           <button className={`menu-item ${vistaActual === 'asistente' ? 'active' : ''}`} onClick={() => setVistaActual('asistente')}>
             <Bot size={18} /> Calamuchita IA
           </button>
+
+          {/* 🎯 Lo que todavía no se ofrece, agrupado para que no ocupe media sidebar: el QR y el
+              calendario de beneficios (apagados también en el backend, ver config/funcionalidades.js). */}
+          <div className="menu-group">
+            <button
+              className="menu-group-header"
+              onClick={() => toggleGrupoMenu('proximamente')}
+              aria-expanded={grupoAbierto === 'proximamente'}
+            >
+              <span className="menu-group-label"><Sparkles size={18} /> Próximamente</span>
+              {grupoAbierto === 'proximamente' ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+            </button>
+            <div className={`menu-group-items ${grupoAbierto === 'proximamente' ? 'abierto' : ''}`}>
+              {!COBROS_QR_HABILITADOS && (
+                <button className="menu-item sub disabled" disabled title="Muy pronto vas a poder cobrar y pagar con QR">
+                  <QrCode size={15} /> Cobrar con QR
+                </button>
+              )}
+              <button className="menu-item sub disabled" disabled title="Muy pronto: descuentos pagando con QR en las fiestas de la región">
+                <PartyPopper size={15} /> Beneficios
+              </button>
+            </div>
+          </div>
 
           <button className={`menu-item ${vistaActual === 'ajustes' ? 'active' : ''}`} onClick={() => setVistaActual('ajustes')}>
             <Settings size={18} /> Ajustes
