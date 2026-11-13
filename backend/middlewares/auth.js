@@ -46,7 +46,7 @@ async function requireAuth(req, res, next) {
     // Sesión de demo: la identidad es la persona demo elegida (ver demoAttach), no Clerk.
     if (req.demo) {
         try {
-            const identidad = await Persona.getIdentidadCompleta(req.demo.usuario);
+            const identidad = await Persona.getIdentidadCompleta(req.demo.clerkId);
             if (!identidad) return res.status(503).json({ error: 'La cuenta demo no está cargada en la base (falta correr init/06_cuenta_demo.sql).' });
             req.personaAutenticada = identidad;
             return next();
@@ -155,7 +155,9 @@ function demoAttach(req, res, next) {
     if (!USUARIOS_DEMO.includes(usuario)) {
         return res.status(400).json({ error: 'Usuario de demo inválido.' });
     }
-    req.demo = { usuario };
+    // usuario = la persona demo "lógica" (demo_cliente / demo_comercio); clerkId = el de su copia
+    // privada en este mundo (ver clonarCuentaDemo en config/sandboxDemo.js).
+    req.demo = { usuario, clerkId: mundo.clerkIds[usuario] };
     mundo.ejecutar(req, res, next);
 }
 

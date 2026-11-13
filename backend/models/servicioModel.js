@@ -39,7 +39,7 @@ class Servicio {
                  FROM Facturas_Servicio f
                  JOIN Empresas_Servicio e ON e.id_empresa = f.id_empresa
                  WHERE f.id_factura = $1
-                 FOR UPDATE`,
+                 FOR UPDATE OF f`,
                 [idFactura]
             );
 

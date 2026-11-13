@@ -1,5 +1,7 @@
 const Servicio = require('../models/servicioModel');
 const { exigirCbuPropio, exigirPersonaPropia } = require('../middlewares/auth');
+const pool = require('../config/db');
+const { mundoActual } = require('../config/sandboxDemo');
 
 // 1. LISTAR EMPRESAS DE SERVICIO
 exports.listarEmpresas = async (req, res) => {
@@ -38,6 +40,14 @@ exports.pagarFactura = async (req, res) => {
     if (!exigirCbuPropio(req, res, cbu)) return;
 
     try {
+        // En la demo solo se pagan las facturas de la propia cuenta demo: pagar la de un cliente
+        // real la dejaría bloqueada hasta que termine la demo (ver config/sandboxDemo.js).
+        if (mundoActual()) {
+            const r = await pool.query('SELECT id_persona FROM Facturas_Servicio WHERE id_factura = $1', [id_factura]);
+            if (r.rows.length > 0 && String(r.rows[0].id_persona) !== String(req.personaAutenticada.id)) {
+                return res.status(403).json({ error: 'En la cuenta demo podés pagar las facturas de tus servicios agendados (Luz y Gas de casa).' });
+            }
+        }
         await Servicio.pagarFactura(id_factura, cbu);
         res.status(201).json({ message: '¡Factura pagada con éxito!' });
     } catch (error) {

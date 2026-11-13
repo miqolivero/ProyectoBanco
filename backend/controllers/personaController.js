@@ -32,7 +32,8 @@ exports.obtenerPorClerk = async (req, res) => {
         if (!userId || userId !== req.params.clerkId) {
             return res.status(401).json({ error: "No autenticado." });
         }
-        const persona = await Persona.getByClerkId(req.params.clerkId);
+        // En la demo, la persona es la copia privada de esa sesión (ver config/sandboxDemo.js).
+        const persona = await Persona.getByClerkId(req.demo ? req.demo.clerkId : req.params.clerkId);
         if (!persona) {
             return res.status(404).json({ error: "Usuario no registrado en la base de datos local" });
         }

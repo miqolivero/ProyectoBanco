@@ -49,7 +49,10 @@ class Mundo {
         this.cerrado = false;
         // Transacciones "enviadas" al Central falso, para que la sincronización las acredite.
         this.transacciones = [];
+        // Se completan con la copia privada de la cuenta demo (ver clonarCuentaDemo).
         this.cbusDemo = new Set();
+        this.clerkIds = {};
+        this.cobroEjemplo = null;
     }
 
     // Consulta "suelta" (fuera de una transacción de un modelo): va directo a la conexión.
@@ -221,6 +224,123 @@ class Mundo {
     }
 }
 
+// 🎯 Copia privada de la cuenta demo para UN mundo.
+//
+// Las filas de init/06_cuenta_demo.sql son una PLANTILLA que ningún mundo toca. Si todos los
+// mundos operaran sobre las mismas filas, el primero que modificara un saldo dejaría esa fila
+// bloqueada hasta que termine (su transacción nunca se confirma), y cualquier otra demo abierta
+// al mismo tiempo —otra pestaña, el celular, otra persona— fallaría con "lock timeout".
+// Por eso, al abrir un mundo se copia la plantilla (personas, cuentas, movimientos, tarjeta,
+// plazo fijo, reserva...) DENTRO de su transacción, con CBU/alias/DNI únicos: cada demo tiene
+// sus propias filas, no compite con nadie, y la copia desaparece con el ROLLBACK.
+async function clonarCuentaDemo(client) {
+    const sufijo = crypto.randomInt(100000, 999999).toString();
+    const q = (texto, params) => client.query(texto, params);
+    const columnas = {};
+    const columnasDe = async (tabla) => {
+        if (!columnas[tabla]) {
+            const r = await q(
+                `SELECT column_name FROM information_schema.columns
+                 WHERE table_schema = 'public' AND table_name = $1 ORDER BY ordinal_position`, [tabla]);
+            columnas[tabla] = r.rows.map(c => c.column_name);
+        }
+        return columnas[tabla];
+    };
+    // Copia una fila cambiando algunas columnas; devuelve la PK nueva.
+    const copiarFila = async (tabla, pk, fila, cambios) => {
+        const cols = (await columnasDe(tabla)).filter(c => c !== pk);
+        const valores = cols.map(c => (c in cambios ? cambios[c] : fila[c]));
+        const r = await q(
+            `INSERT INTO ${tabla} (${cols.join(', ')}) VALUES (${cols.map((_, i) => `$${i + 1}`).join(', ')}) RETURNING ${pk}`,
+            valores);
+        return r.rows[0][pk];
+    };
+    // Copia todas las filas de `tabla` cuya columna `fk` apunte a algo ya copiado, remapeando
+    // esa y las demás columnas de `remapeos`. Devuelve Map(pk vieja → pk nueva).
+    const copiarHijos = async (tabla, pk, fk, remapeos, cambiosExtra = () => ({})) => {
+        const mapa = new Map();
+        const claves = [...remapeos[fk].keys()];
+        if (claves.length === 0) return mapa;
+        const filas = (await q(`SELECT * FROM ${tabla} WHERE ${fk} = ANY($1) ORDER BY ${pk}`, [claves])).rows;
+        for (const fila of filas) {
+            const cambios = {};
+            for (const [col, m] of Object.entries(remapeos)) {
+                if (fila[col] != null && m.has(fila[col])) cambios[col] = m.get(fila[col]);
+            }
+            Object.assign(cambios, cambiosExtra(fila));
+            mapa.set(fila[pk], await copiarFila(tabla, pk, fila, cambios));
+        }
+        return mapa;
+    };
+    const digitos = (n) => Array.from({ length: n }, () => crypto.randomInt(0, 10)).join('');
+
+    // 1. Personas (la plantilla se reconoce por su clerk_id)
+    const personas = (await q('SELECT * FROM Personas WHERE clerk_id = ANY($1) ORDER BY id', [USUARIOS_DEMO])).rows;
+    if (personas.length === 0) return null;
+    const mPersonas = new Map();
+    const clerkIds = {};
+    for (const [i, p] of personas.entries()) {
+        const clerkId = `${p.clerk_id}__${sufijo}`;
+        clerkIds[p.clerk_id] = clerkId;
+        mPersonas.set(p.id, await copiarFila('personas', 'id', p, { dni: `9${i}${sufijo}`, clerk_id: clerkId }));
+    }
+    await q(
+        `INSERT INTO Roles_x_Personas (id_persona, id_rol)
+         SELECT m.nueva, rp.id_rol FROM Roles_x_Personas rp
+         JOIN unnest($1::int[], $2::int[]) AS m(vieja, nueva) ON m.vieja = rp.id_persona`,
+        [[...mPersonas.keys()], [...mPersonas.values()]]);
+
+    // 2. Productos y cuentas (CBU y alias nuevos, únicos)
+    const mProductos = await copiarHijos('productos', 'id_producto', 'id_persona', { id_persona: mPersonas });
+    const mCbus = new Map();
+    const mCuentas = await copiarHijos('cuentas_bancarias', 'id_cuenta', 'id_producto', { id_producto: mProductos }, (c) => {
+        const cbu = `0049998${sufijo}${digitos(9)}`;
+        mCbus.set(c.cbu, cbu);
+        return { cbu, alias: c.alias ? `${c.alias}.${sufijo}`.slice(0, 50) : null };
+    });
+
+    // 3. Movimientos, en un solo INSERT (son la mayoría de las filas)
+    await q(
+        `INSERT INTO Movimientos (id_cuenta, id_tipo_movimiento, monto, fecha_movimiento, descripcion,
+                                  cbu_origen, cbu_destino, id_transaccion_central)
+         SELECT mc.nueva, m.id_tipo_movimiento, m.monto, m.fecha_movimiento, m.descripcion,
+                COALESCE(o.nuevo, m.cbu_origen), COALESCE(d.nuevo, m.cbu_destino), m.id_transaccion_central
+         FROM Movimientos m
+         JOIN unnest($1::int[], $2::int[]) AS mc(vieja, nueva) ON mc.vieja = m.id_cuenta
+         LEFT JOIN unnest($3::text[], $4::text[]) AS o(viejo, nuevo) ON o.viejo = m.cbu_origen
+         LEFT JOIN unnest($3::text[], $4::text[]) AS d(viejo, nuevo) ON d.viejo = m.cbu_destino
+         ORDER BY m.id_movimiento`,
+        [[...mCuentas.keys()], [...mCuentas.values()], [...mCbus.keys()], [...mCbus.values()]]);
+
+    // 4. Productos asociados
+    const mTarjetas = await copiarHijos('tarjetas_credito', 'id_tarjeta', 'id_producto', { id_producto: mProductos },
+        () => ({ numero_tarjeta: `4507${digitos(12)}` }));
+    const mConsumos = await copiarHijos('consumos_tarjeta', 'id_consumo', 'id_tarjeta', { id_tarjeta: mTarjetas });
+    await copiarHijos('cuotas_tarjeta', 'id_cuota', 'id_consumo', { id_consumo: mConsumos });
+    await copiarHijos('plazos_fijos', 'id_plazo_fijo', 'id_cuenta', { id_cuenta: mCuentas });
+    await copiarHijos('reservas', 'id_reserva', 'id_cuenta', { id_cuenta: mCuentas });
+    const mCobros = await copiarHijos('cobros', 'id_cobro', 'id_cuenta_cobradora',
+        { id_cuenta_cobradora: mCuentas, id_cuenta_pagadora: mCuentas });
+
+    // 5. Servicios agendados propios (con monto fijo: generan su factura del mes). Así se puede
+    // probar el pago de servicios sin tocar facturas de clientes reales (ver servicioController).
+    const idCliente = mPersonas.get(personas.find(p => p.clerk_id === USUARIO_DEMO_PRINCIPAL)?.id);
+    if (idCliente) {
+        await q(
+            `INSERT INTO Servicios_Agendados (id_persona, id_empresa, numero_cliente, alias, monto_fijo, dia_vencimiento, debito_automatico)
+             SELECT $1, e.id_empresa, $2 || e.id_empresa, s.alias, s.monto, 10, false
+             FROM (VALUES ('Electricidad', 'Luz de casa', 21450.00), ('Gas', 'Gas de casa', 18900.00)) AS s(rubro, alias, monto)
+             JOIN LATERAL (SELECT id_empresa FROM Empresas_Servicio WHERE rubro = s.rubro ORDER BY id_empresa LIMIT 1) e ON true`,
+            [idCliente, `D${sufijo}-`]);
+    }
+
+    return {
+        clerkIds,
+        cbus: new Set(mCbus.values()),
+        cobroEjemplo: mCobros.get(ID_COBRO_EJEMPLO) || null
+    };
+}
+
 async function cerrarMundo(token) {
     const mundo = mundos.get(token);
     if (!mundo || mundo.cerrado) return;
@@ -257,12 +377,22 @@ async function crearMundo(conectarReal) {
     }
     const token = crypto.randomBytes(24).toString('base64url');
     const mundo = new Mundo(token, client);
-    const cbus = await client.query(
-        `SELECT cb.cbu FROM Cuentas_Bancarias cb
-         JOIN Productos pr ON pr.id_producto = cb.id_producto
-         JOIN Personas p ON p.id = pr.id_persona
-         WHERE p.clerk_id = ANY($1)`, [USUARIOS_DEMO]);
-    cbus.rows.forEach(r => mundo.cbusDemo.add(r.cbu));
+    let copia;
+    try {
+        copia = await clonarCuentaDemo(client);
+    } catch (error) {
+        try { await client.query('ROLLBACK'); } catch { /* la conexión se descarta igual */ }
+        client.release(true);
+        throw error;
+    }
+    if (!copia) {
+        await client.query('ROLLBACK');
+        client.release(true);
+        return null; // falta correr init/06_cuenta_demo.sql
+    }
+    mundo.clerkIds = copia.clerkIds;
+    mundo.cbusDemo = copia.cbus;
+    mundo.cobroEjemplo = copia.cobroEjemplo;
     mundos.set(token, mundo);
     console.log(`🧪 Demo abierta (${mundos.size} activas).`);
     return mundo;

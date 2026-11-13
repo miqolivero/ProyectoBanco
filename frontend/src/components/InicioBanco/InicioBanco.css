@@ -1074,7 +1074,8 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  flex: 1;
+  /* Base de 140px: en el celular quedan de a dos por fila en vez de aplastarse a 24px. */
+  flex: 1 1 140px;
 }
 .filter-field label {
   font-size: 12px;
@@ -1316,11 +1317,13 @@
   color: #718096;
 }
 
-/* Monto a la derecha */
+/* Monto a la derecha: nunca se achica ni se corta (el que cede espacio es la descripción). */
 .tx-amount {
   font-size: 16px;
   font-weight: 600;
   white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: 12px;
 }
 
 .tx-amount.positive {
@@ -1441,7 +1444,11 @@
 
   .main-content {
     padding: 20px;
-    overflow-wrap: anywhere; /* CBUs, emails y montos largos parten en vez de estirar la fila */
+    /* break-word y no anywhere: anywhere deja partir CUALQUIER palabra en cualquier letra y además
+       achica el ancho mínimo de las cajas, por eso botones y tarjetas quedaban con el texto
+       partido letra por letra ("Nu-evo des-tina-tario"). break-word solo corta una palabra que
+       no entra ni en una línea entera (un CBU, un email largo). */
+    overflow-wrap: break-word;
   }
 
   /* 🎯 Lo que se cortaba a la derecha: los ítems de grid/flex tienen min-width:auto, o sea
@@ -1489,6 +1496,27 @@
   .history-actions-top button {
     flex: 1;
     justify-content: center;
+  }
+
+  /* Movimientos recientes: más lugar para la descripción y la fecha en una sola línea. */
+  .tx-icon-container {
+    width: 36px;
+    height: 36px;
+    margin-right: 10px;
+  }
+
+  .tx-description {
+    font-size: 14px;
+  }
+
+  .tx-date {
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .tx-amount {
+    font-size: 14px;
+    margin-left: 8px;
   }
 }
 /* ===================================================================
@@ -1581,4 +1609,55 @@ button.beneficio-card:hover {
 .beneficio-card.mantenimiento .beneficio-icono {
   background: #f3f4f6;
   color: #4b5563;
+}
+
+/* ===================================================================
+   HISTORIAL EN CELULAR — la tabla de 4 columnas no entra en 360px: cada
+   movimiento pasa a ser una tarjeta (detalle y monto arriba, fecha y
+   categoría abajo), como en las apps de los bancos.
+   =================================================================== */
+@media (max-width: 640px) {
+  .history-table-element {
+    min-width: 0;
+  }
+
+  .history-table-element thead {
+    display: none;
+  }
+
+  .history-table-element,
+  .history-table-element tbody {
+    display: block;
+  }
+
+  .history-table-element tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "detalle monto"
+      "fecha categoria";
+    gap: 6px 12px;
+    align-items: center;
+    padding: 14px 16px;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  .history-table-element td {
+    padding: 0;
+    border: none;
+  }
+
+  .history-table-element td:nth-child(1) { grid-area: fecha; font-size: 12px; }
+  .history-table-element td:nth-child(2) { grid-area: detalle; font-size: 14px; }
+  .history-table-element td:nth-child(3) { grid-area: categoria; justify-self: end; }
+  .history-table-element td:nth-child(4) { grid-area: monto; white-space: nowrap; }
+
+  .history-table-element td.table-empty-row {
+    grid-column: 1 / -1;
+    padding: 20px 0;
+  }
+
+  .btn-clear-filters {
+    width: 100%;
+  }
 }

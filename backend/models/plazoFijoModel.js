@@ -121,7 +121,7 @@ class PlazoFijo {
                  FROM Plazos_Fijos pf
                  JOIN Cuentas_Bancarias c ON c.id_cuenta = pf.id_cuenta
                  WHERE pf.id_plazo_fijo = $1
-                 FOR UPDATE`,
+                 FOR UPDATE OF pf`,
                 [idPlazoFijo]
             );
             if (resPlazoFijo.rows.length === 0) {

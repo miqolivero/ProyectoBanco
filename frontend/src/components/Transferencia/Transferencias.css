@@ -1,29 +1,11 @@
+/* 🎯 Misma estructura y medidas que Depósitos, Recargas y Cambio de divisa: encabezado,
+   selector de cuenta, tarjeta con el formulario y panel "Tu cuenta". Antes tenía márgenes
+   propios (40px a los costados + 40px adentro) que en el celular dejaban el formulario en una
+   columna angosta y partían las palabras. */
 .transfer-container {
-  padding: 20px 40px; /* Le da aire arriba/abajo y a los lados */
-  animation: fadeIn 0.2s ease-in-out;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* 🎯 SOLUCIÓN AL ESPACIO HORRIBLE: 
-   Usamos el 100% del ancho disponible para alinearnos perfectamente con los elementos de la barra superior */
-.transfer-grid {
-  display: grid;
-  grid-template-columns: 1fr 340px; /* El formulario toma todo el espacio restante de forma elástica, la sidebar queda fija y estilizada */
-  gap: 40px;                        /* Espacio elegante entre el formulario y los paneles */
-  align-items: start;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.transfer-form-card {
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  padding: 40px; /* Más espacio interno para que respire el formulario */
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
-  width: 100%;
-  box-sizing: border-box;
+  padding: 12px 0;
+  max-width: 1000px;
+  animation: fadeIn 0.3s ease-in-out;
 }
 
 .transfer-eyebrow {
@@ -35,234 +17,199 @@
   margin-bottom: 6px;
 }
 
-.form-card-title {
+.transfer-header-box h2 {
+  font-size: 24px;
+  color: #111827;
+  margin: 0 0 4px 0;
+}
+
+.transfer-header-box p {
+  color: #1a5c3f;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  background: linear-gradient(90deg, #eefdf4, rgba(238, 253, 244, 0));
+  border-left: 3px solid #2e7d4f;
+  padding: 8px 14px;
+  border-radius: 0 8px 8px 0;
   margin: 0 0 28px 0;
-  font-size: 20px;
-  color: #111827;
-  font-weight: 600;
-  border-bottom: 1px solid #f3f4f6;
-  padding-bottom: 14px;
 }
 
-.form-section {
-  margin-bottom: 24px;
+.transfer-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 24px;
+  align-items: start;
 }
 
-.section-label {
-  display: block;
-  font-size: 13px;
-  font-weight: 600;
-  color: #4b5563;
-  margin-bottom: 8px;
+.transfer-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
 }
 
-/* Selector Cuenta Origen */
-.account-selector-card {
-  border: 1px solid #0f3424;
-  background-color: #f0fdf4;
-  padding: 16px;
-  border-radius: 10px;
-  width: 100%; 
-  box-sizing: border-box;
-}
-
-.account-info-main {
+.transfer-form {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
-  font-weight: 600;
-  color: #0f3424;
-}
-
-.check-icon {
-  background: #0f3424;
-  color: white;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-}
-
-.account-balance-display {
-  font-size: 22px;
-  font-weight: 700;
-  color: #111827;
-  margin: 10px 0 0 0;
-}
-
-/* Toggles y Botones */
-.destination-type-toggle {
-  display: flex;
-  gap: 12px;
-}
-
-.toggle-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  border: 1px solid #d1d5db;
-  background-color: white;
-  color: #4b5563;
-  transition: all 0.2s;
-}
-
-.toggle-btn.active {
-  background-color: #0f3424;
-  color: white;
-  border-color: #0f3424;
-  cursor: default;
-}
-
-.toggle-btn.cancel {
-  background-color: #f9fafb;
-}
-
-.toggle-btn.cancel:hover {
-  background-color: #f3f4f6;
-  color: #111827;
-}
-
-/* Inputs */
-.form-input-text {
-  width: 100%;
-  padding: 14px;
-  border-radius: 8px;
-  border: 1px solid #d1d5db;
-  background-color: #f9fafb;
-  font-size: 14px;
-  box-sizing: border-box;
-  outline: none;
-  transition: all 0.2s;
-}
-
-.form-input-text:focus {
-  border-color: #0f3424;
-  background-color: white;
-  box-shadow: 0 0 0 3px rgba(15, 52, 36, 0.08);
-}
-
-.form-inline-group {
-  display: flex;
+  flex-direction: column;
   gap: 20px;
 }
 
-.flex-1 { flex: 1; }
-
-/* 🎯 El símbolo ya no va superpuesto sobre el input con un padding-left fijo en px (se
-   superponía con el placeholder cuando el símbolo pasaba de "$" a "US$" en la cuenta en
-   dólares) — ahora vive como un elemento normal dentro del wrapper, que reserva su propio
-   ancho según el texto que tenga, sin importar cuántos caracteres sea. El borde/fondo que
-   antes tenía el input (heredados de .form-input-text) pasan a vivir acá. */
-.amount-input-wrapper {
+.transfer-field {
   display: flex;
-  align-items: center;
-  width: 100%;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.transfer-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.transfer-input {
+  padding: 12px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
-  background-color: #f9fafb;
-  transition: all 0.2s;
-}
-
-.amount-input-wrapper:focus-within {
-  border-color: #0f3424;
   background-color: white;
-  box-shadow: 0 0 0 3px rgba(15, 52, 36, 0.08);
+  color: #111827;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  min-width: 0;
+  transition: border-color 0.2s;
 }
 
-.currency-symbol {
+.transfer-input:focus {
+  border-color: #0f3424;
+  box-shadow: 0 0 0 3px rgba(15, 52, 36, 0.1);
+}
+
+.transfer-monto-wrapper {
+  display: flex;
+  align-items: center;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  transition: border-color 0.2s;
+}
+
+.transfer-monto-wrapper:focus-within {
+  border-color: #0f3424;
+  box-shadow: 0 0 0 3px rgba(15, 52, 36, 0.1);
+}
+
+.transfer-currency-prefix {
   padding-left: 14px;
+  font-size: 20px;
   font-weight: 600;
   color: #4b5563;
   white-space: nowrap;
 }
 
-.amount-input {
+.transfer-input-monto {
   flex: 1;
   min-width: 0;
-  padding-left: 6px !important;
-  border: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
+  padding: 14px 14px 14px 6px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 20px;
   font-weight: 600;
+  outline: none;
   color: #111827;
 }
 
-/* Botón enviar principal */
-.btn-submit-transfer {
-  width: 100%;
-  background-color: #0f3424;
-  color: white;
-  border: none;
-  padding: 16px;
+.transfer-alert {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 16px;
   border-radius: 8px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.2s;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.transfer-alert.error {
+  background-color: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.transfer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
   margin-top: 12px;
 }
 
-.btn-submit-transfer:hover:not(:disabled) {
+.btn-transfer-cancelar {
+  background-color: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #d1d5db;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-transfer-cancelar:hover {
+  background-color: #e5e7eb;
+}
+
+.btn-transfer-confirmar {
+  background-color: #0f3424;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-transfer-confirmar:hover:not(:disabled) {
   opacity: 0.9;
 }
 
-/* 🎯 SIDEBAR FINA Y ALINEADA AL BORDE DERECHO DE LA PANTALLA */
-.transfer-sidebar-right {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  width: 100%;
+.btn-transfer-confirmar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-.security-banner-card {
-  background: linear-gradient(135deg, #0f3424 0%, #154732 100%);
-  color: white;
-  padding: 30px;
+.transfer-info-panel {
+  background: white;
+  border: 1px solid #e5e7eb;
   border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
-  box-sizing: border-box;
+  padding: 28px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
 }
 
-.security-banner-card.alternative-box {
-  background: linear-gradient(135deg, #11251c 0%, #1a382b 100%);
-}
-
-.security-banner-card h4 {
-  margin: 0 0 16px 0;
+.transfer-info-panel h4 {
+  margin: 0 0 18px 0;
   padding-bottom: 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  border-bottom: 1px solid #f3f4f6;
   font-size: 15px;
-  font-weight: 600;
-}
-
-.security-banner-card p {
-  margin: 0;
-  font-size: 13px;
-  opacity: 0.85;
-  line-height: 1.6;
+  color: #111827;
 }
 
 .transfer-info-label {
   display: block;
   font-size: 11px;
   font-weight: 600;
-  opacity: 0.7;
+  color: #6b7280;
   letter-spacing: 0.5px;
   margin-top: 18px;
   padding-top: 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 1px solid #f3f4f6;
 }
 
-.security-banner-card .transfer-info-label:first-of-type {
+.transfer-info-panel .transfer-info-label:first-of-type {
   margin-top: 0;
   padding-top: 0;
   border-top: none;
@@ -272,27 +219,18 @@
   margin: 4px 0 0 0;
   font-size: 22px;
   font-weight: 700;
+  color: #0f3424;
 }
 
 .transfer-info-dato {
   margin: 4px 0 0 0;
   font-size: 14px;
+  color: #111827;
   word-break: break-all;
 }
 
-/* Alertas */
-.form-alert {
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 13px;
-  margin-bottom: 20px;
-  font-weight: 500;
-}
-.form-alert.error { background-color: #fef2f2; color: #991b1b; }
-
-/* Responsive */
-@media (max-width: 1024px) {
-  .transfer-grid {
+@media (max-width: 900px) {
+  .transfer-layout {
     grid-template-columns: 1fr;
   }
 }

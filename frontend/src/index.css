@@ -1,3 +1,10 @@
+/* Que Chrome/Safari en el celular no agranden la letra por su cuenta en algunos bloques
+   ("text autosizing"): con esto el tamaño es siempre el del CSS, igual en todas las pantallas. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 html, body, #root {
   margin: 0;
   padding: 0;

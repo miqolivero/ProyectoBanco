@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, FileText, UserPlus, X } from 'lucide-react';
+import { AlertTriangle, Check, FileText } from 'lucide-react';
 import SelectorCuenta from '../SelectorCuenta/SelectorCuenta';
 import AdvertenciaCbuNuevo from '../AdvertenciaCbuNuevo/AdvertenciaCbuNuevo';
 import './Transferencias.css';
@@ -189,113 +189,108 @@ export default function Transferencias({ datosUsuario, cuentas, monedaActiva, on
 
   return (
     <div className="transfer-container">
-      {/* 🎯 SE REMOVIÓ EL TITULO REDUNDANTE SUPERIOR PARA SIMPLIFICAR LA INTERFAZ */}
-      <div className="transfer-grid">
-        
-        {/* COLUMNA IZQUIERDA: FORMULARIO */}
-        <form className="transfer-form-card" onSubmit={handleTransferir}>
-          <span className="transfer-eyebrow">De cuenta a cuenta, con la calma del valle</span>
-          <h3 className="form-card-title">Formulario de Envío</h3>
-          
-          {cuentas?.length > 0 && (
-            <div className="form-section">
-              <label className="section-label">Cuenta de origen</label>
-              <SelectorCuenta
-                cuentas={cuentas}
-                monedaActiva={monedaActiva}
-                onCambiarMoneda={onCambiarMoneda}
-                mostrarAbrirUSD={mostrarAbrirUSD}
-                onAbrirUSD={onAbrirUSD}
-                abriendoUSD={abriendoUSD}
+      <div className="transfer-header-box">
+        <span className="transfer-eyebrow">De cuenta a cuenta, con la calma del valle</span>
+        <h2>Transferencias</h2>
+        <p>Enviá dinero a cualquier CBU, CVU o alias de la red bancaria, al instante.</p>
+      </div>
+
+      {cuentas?.length > 0 && (
+        <SelectorCuenta
+          cuentas={cuentas}
+          monedaActiva={monedaActiva}
+          onCambiarMoneda={onCambiarMoneda}
+          mostrarAbrirUSD={mostrarAbrirUSD}
+          onAbrirUSD={onAbrirUSD}
+          abriendoUSD={abriendoUSD}
+        />
+      )}
+
+      <div className="transfer-layout">
+        <div className="transfer-card">
+          <form className="transfer-form" onSubmit={handleTransferir}>
+            <div className="transfer-field">
+              <label>CBU, CVU o alias de destino</label>
+              <input
+                type="text"
+                className="transfer-input"
+                placeholder="22 números o el alias"
+                value={cbuDestino}
+                onChange={(e) => setCbuDestino(e.target.value)}
+                disabled={cargando}
+                required
               />
             </div>
-          )}
 
-          <div className="form-section">
-            <label className="section-label">Destino de la transferencia</label>
-            <div className="destination-type-toggle">
-              {/* No es un botón: hoy solo existe esta única forma de transferir (por CBU/alias), así
-                  que se muestra como una etiqueta de contexto, no como algo clickeable que no hace nada. */}
-              <span className="toggle-btn active"><UserPlus size={14} /> Nuevo destinatario</span>
-              <button type="button" className="toggle-btn cancel" onClick={alCancelar}><X size={14} /> Volver al Inicio</button>
-            </div>
-          </div>
-
-          <div className="form-section">
-            <label className="section-label">CBU / CVU o Alias de destino</label>
-            <input
-              type="text"
-              className="form-input-text"
-              placeholder="Ingresa los 22 números o el alias del beneficiario"
-              value={cbuDestino}
-              onChange={(e) => setCbuDestino(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="form-inline-group">
-            <div className="form-section flex-1">
-              <label className="section-label">Monto a transferir</label>
-              <div className="amount-input-wrapper">
-                <span className="currency-symbol">{cuentaOrigen?.moneda === 'USD' ? 'US$' : '$'}</span>
+            <div className="transfer-field">
+              <label>Monto a transferir ({cuentaOrigen?.moneda || 'ARS'})</label>
+              <div className="transfer-monto-wrapper">
+                <span className="transfer-currency-prefix">{cuentaOrigen?.moneda === 'USD' ? 'US$' : '$'}</span>
                 <input
                   type="number"
                   step="any"
-                  className="form-input-text amount-input"
-                  placeholder="0,00"
+                  className="transfer-input-monto"
+                  placeholder="0.00"
                   value={monto}
                   onChange={(e) => setMonto(e.target.value)}
+                  disabled={cargando}
                   required
                 />
               </div>
             </div>
 
-            <div className="form-section flex-1">
-              <label className="section-label">Concepto (Opcional)</label>
-              <select className="form-input-text" value={concepto} onChange={(e) => setConcepto(e.target.value)}>
+            <div className="transfer-field">
+              <label>Concepto (opcional)</label>
+              <select className="transfer-input" value={concepto} onChange={(e) => setConcepto(e.target.value)} disabled={cargando}>
                 <option value="Varios">Varios</option>
                 <option value="Alquiler">Alquiler</option>
                 <option value="Facturas">Facturas</option>
                 <option value="Préstamos">Préstamos</option>
               </select>
             </div>
-          </div>
 
-          {mensaje.texto && <div className={`form-alert ${mensaje.tipo}`}>{mensaje.texto}</div>}
-
-          <button type="submit" className="btn-submit-transfer" disabled={cargando}>
-            {cargando ? 'Procesando con el Central...' : 'Confirmar Transferencia'}
-          </button>
-        </form>
-
-        {advertencia && (
-          <AdvertenciaCbuNuevo
-            mensaje={advertencia.mensaje}
-            nombreDestino={advertencia.nombreDestino}
-            procesando={cargando}
-            alConfirmar={() => enviarTransferencia(true)}
-            alCancelar={() => setAdvertencia(null)}
-          />
-        )}
-
-        {/* COLUMNA DERECHA: tus propios datos, por si necesitás compartirlos */}
-        <div className="transfer-sidebar-right">
-          <div className="security-banner-card">
-            <h4>Tu cuenta {cuentaOrigen?.moneda === 'USD' ? '(USD)' : ''}</h4>
-            <span className="transfer-info-label">Saldo disponible</span>
-            <p className="transfer-info-saldo">{formatearMoneda(cuentaOrigen?.saldo)}</p>
-            <span className="transfer-info-label">CBU</span>
-            <p className="transfer-info-dato mono-text">{cuentaOrigen?.cbu}</p>
-            {cuentaOrigen?.alias && (
-              <>
-                <span className="transfer-info-label">Alias</span>
-                <p className="transfer-info-dato">{cuentaOrigen.alias}</p>
-              </>
+            {mensaje.texto && (
+              <div className={`transfer-alert ${mensaje.tipo}`}>
+                <AlertTriangle size={16} /> {mensaje.texto}
+              </div>
             )}
-          </div>
+
+            <div className="transfer-actions">
+              <button type="button" onClick={alCancelar} disabled={cargando} className="btn-transfer-cancelar">
+                Volver al Inicio
+              </button>
+              <button type="submit" disabled={cargando || !monto || !cbuDestino} className="btn-transfer-confirmar">
+                {cargando ? 'Procesando...' : 'Confirmar Transferencia'}
+              </button>
+            </div>
+          </form>
         </div>
 
+        {/* Tus propios datos, por si necesitás compartirlos */}
+        <div className="transfer-info-panel">
+          <h4>Tu cuenta</h4>
+          <span className="transfer-info-label">Saldo disponible</span>
+          <p className="transfer-info-saldo">{formatearMoneda(cuentaOrigen?.saldo)}</p>
+          <span className="transfer-info-label">CBU</span>
+          <p className="transfer-info-dato mono-text">{cuentaOrigen?.cbu}</p>
+          {cuentaOrigen?.alias && (
+            <>
+              <span className="transfer-info-label">Alias</span>
+              <p className="transfer-info-dato">{cuentaOrigen.alias}</p>
+            </>
+          )}
+        </div>
       </div>
+
+      {advertencia && (
+        <AdvertenciaCbuNuevo
+          mensaje={advertencia.mensaje}
+          nombreDestino={advertencia.nombreDestino}
+          procesando={cargando}
+          alConfirmar={() => enviarTransferencia(true)}
+          alCancelar={() => setAdvertencia(null)}
+        />
+      )}
     </div>
   );
 }

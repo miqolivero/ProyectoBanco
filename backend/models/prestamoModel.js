@@ -313,7 +313,7 @@ class Prestamo {
                  JOIN Prestamos pr ON pr.id_prestamo = cp.id_prestamo
                  JOIN Personas p ON p.id = pr.id_persona
                  WHERE cp.id_cuota = $1
-                 FOR UPDATE`,
+                 FOR UPDATE OF cp`,
                 [idCuota]
             );
             if (resCuota.rows.length === 0) {

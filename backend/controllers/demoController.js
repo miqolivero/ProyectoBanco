@@ -1,6 +1,6 @@
 const pool = require('../config/db');
 const {
-    USUARIOS_DEMO, USUARIO_DEMO_PRINCIPAL, ID_COBRO_EJEMPLO, MINUTOS_INACTIVIDAD,
+    USUARIOS_DEMO, USUARIO_DEMO_PRINCIPAL, MINUTOS_INACTIVIDAD,
     crearMundo, obtenerMundo, cerrarMundo
 } = require('../config/sandboxDemo');
 const { esUuid } = require('../utils/validaciones');
@@ -11,7 +11,7 @@ function datosSesion(mundo, usuario) {
         token: mundo.token,
         usuario,
         usuarios: USUARIOS_DEMO,
-        cobroEjemplo: ID_COBRO_EJEMPLO,
+        cobroEjemplo: mundo.cobroEjemplo,
         minutosInactividad: MINUTOS_INACTIVIDAD
     };
 }
@@ -20,9 +20,7 @@ function datosSesion(mundo, usuario) {
 exports.crearSesion = async (req, res) => {
     try {
         const mundo = await crearMundo(pool.conectarReal);
-        const existe = await mundo.client.query('SELECT 1 FROM Personas WHERE clerk_id = $1', [USUARIO_DEMO_PRINCIPAL]);
-        if (existe.rows.length === 0) {
-            await cerrarMundo(mundo.token);
+        if (!mundo) {
             return res.status(503).json({ error: 'La cuenta demo no está cargada en la base (falta correr init/06_cuenta_demo.sql).' });
         }
         res.status(201).json(datosSesion(mundo, USUARIO_DEMO_PRINCIPAL));
@@ -50,7 +48,8 @@ exports.unirse = async (req, res) => {
                  JOIN Productos pr ON pr.id_producto = cb.id_producto
                  JOIN Personas p ON p.id = pr.id_persona
                  WHERE co.id_cobro = $1`, [idCobro]);
-            const cobrador = r.rows[0]?.clerk_id;
+            // clerk_id de la copia: "demo_comercio__123456" → persona lógica "demo_comercio"
+            const cobrador = r.rows[0]?.clerk_id?.split('__')[0];
             if (cobrador) usuario = USUARIOS_DEMO.find(u => u !== cobrador) || USUARIO_DEMO_PRINCIPAL;
         }
         mundo.ultimoUso = Date.now();

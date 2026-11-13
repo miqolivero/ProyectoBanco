@@ -243,7 +243,7 @@ class Tarjeta {
                  JOIN Tarjetas_Credito t ON t.id_tarjeta = co.id_tarjeta
                  JOIN Productos prTarjeta ON prTarjeta.id_producto = t.id_producto
                  WHERE ct.id_cuota = $1
-                 FOR UPDATE`,
+                 FOR UPDATE OF ct`,
                 [idCuota]
             );
             if (resCuota.rows.length === 0) {
